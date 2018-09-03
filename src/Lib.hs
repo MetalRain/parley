@@ -5,15 +5,25 @@ module Lib
     , typeNameParser
     , identifierParser
     , integerParser
+    , scalarParser
+    , vectorParser
     , testParser
     , Type(..)
     , Identifier(..)
+    , TInteger
+    , TScalar
+    , mkScalar
+    , TVector(..)
+    , Primitive(..)
     ) where
 
 import Data.Char (isSpace)
+import Data.Ratio ((%))
 import Text.Parsec.Char ( alphaNum, char, digit, lower, oneOf, spaces, string, upper )
-import Text.Parsec.Prim ( (<|>), Parsec(..), parse, many )
-import Text.Parsec.Combinator ( notFollowedBy, many1, option, sepBy, sepBy1 )
+import Text.Parsec.Prim ( (<|>), Parsec(..), many, parse, try )
+import Text.Parsec.Combinator ( choice, notFollowedBy, many1, option, sepBy, sepBy1 )
+
+type ParserOf st a = Parsec String st a
 
 type TypeName = String
 type IdentifierName = String
@@ -26,7 +36,7 @@ type OutputType = Type
 -- Primary types
 type TInteger = Integer
 type TScalar = Rational
-data TVector = TVector TInteger Type deriving (Eq, Show)
+data TVector = TVector TInteger [Primitive] deriving (Eq, Show)
 
 data TFunction = TFunction [InputType] OutputType deriving (Eq, Show)
 
@@ -72,101 +82,127 @@ a <- Expression
 -}
 data Application = Application IdentifierName Expression deriving (Eq, Show)
 
+-- Utils
 
 testParser p = parse p ""
 
-identifierNameParser :: Parsec String st IdentifierName
+surroundedWithSpaces :: String -> ParserOf st String
+surroundedWithSpaces s = do
+  _ <- spaces
+  r <- string s
+  _ <- spaces
+  return r
+
+mkScalar :: (Integral a) => a -> a -> TScalar
+mkScalar a b  = (fromIntegral a) % (fromIntegral b)
+
+-- Parsers
+
+identifierNameParser :: ParserOf st IdentifierName
 identifierNameParser = do
   start <- lower
   rest  <- many (alphaNum)
   return $ (start:rest)
 
-typeNameParser :: Parsec String st TypeName
+typeNameParser :: ParserOf st TypeName
 typeNameParser = do
   start <- upper
   rest  <- many (alphaNum)
   return $ (start:rest)
 
-identifierParser :: Parsec String st Identifier
+identifierParser :: ParserOf st Identifier
 identifierParser = do
   idName   <- identifierNameParser
-  _        <- spaces
-  colon    <- string ":"
-  _        <- spaces
+  _        <- surroundedWithSpaces ":"
   typeName <- typeNameParser
   return $ Identifier idName (Type typeName)
 
-identifiersParser :: Parsec String st [Identifier]
+identifiersParser :: ParserOf st [Identifier]
 identifiersParser = identifierParser `sepBy` (spaces)
 
-
-negIntegerParser :: Parsec String st TInteger
+negIntegerParser :: ParserOf st TInteger
 negIntegerParser = do
   sign <- char '-'
   number <- oneOf "123456789"
   moreNumbers <- many (digit)
+  notFollowedBy digit
   return $ read $ [sign, number] ++ moreNumbers
 
-zeroIntegerParser :: Parsec String st TInteger
+zeroIntegerParser :: ParserOf st TInteger
 zeroIntegerParser = do
   zero <- char '0'
   notFollowedBy digit
   return 0
 
-posIntegerParser :: Parsec String st TInteger
+posIntegerParser :: ParserOf st TInteger
 posIntegerParser = do
   number <- oneOf "123456789"
   moreNumbers <- many (digit)
+  notFollowedBy digit
   return $ read $ [number] ++ moreNumbers
 
-integerParser :: Parsec String st TInteger
+integerParser :: ParserOf st TInteger
 integerParser = negIntegerParser <|> zeroIntegerParser <|> posIntegerParser
 
-integerPrimParser :: Parsec String st Primitive
+integerPrimParser :: ParserOf st Primitive
 integerPrimParser = PrimInt <$> integerParser
 
---scalarParser :: Parsec String st TScalar
---scalarParser = _
+scalarParser :: ParserOf st TScalar
+scalarParser = do
+  numerator   <- integerParser
+  _           <- surroundedWithSpaces "/"
+  denominator <- posIntegerParser
+  return $ (fromIntegral numerator) % (fromIntegral denominator)
 
-primitiveParser :: Parsec String st Primitive
-primitiveParser = integerPrimParser
+scalarPrimParser :: ParserOf st Primitive
+scalarPrimParser = PrimScalar <$> scalarParser
+
+primitiveParser :: ParserOf st Primitive
+primitiveParser = (try vectorPrimParser)
+                <|> (try scalarPrimParser)
+                <|> (try integerPrimParser) 
+
+vectorParser :: ParserOf st TVector
+vectorParser = do
+  start <- char '('
+  prims <- primitiveParser `sepBy` (surroundedWithSpaces ",")
+  end   <- char ')'
+  return $ TVector (toInteger (length prims)) prims
+
+vectorPrimParser :: ParserOf st Primitive
+vectorPrimParser = PrimVector <$> vectorParser
 
 
-argumentIdentifierParser :: Parsec String st Argument
-argumentIdentifierParser = do
-  ident <- identifierNameParser
-  return $ ArgIdent ident
+argumentIdentifierParser :: ParserOf st Argument
+argumentIdentifierParser = ArgIdent <$> identifierNameParser
+
+argumentPrimitiveParser :: ParserOf st Argument
+argumentPrimitiveParser = ArgPrim <$> primitiveParser
 
 
-argumentPrimitiveParser :: Parsec String st Argument
-argumentPrimitiveParser = do
-  prim <- primitiveParser
-  return $ ArgPrim prim
-
-
-argumentParser :: Parsec String st Argument
+argumentParser :: ParserOf st Argument
 argumentParser = argumentIdentifierParser <|> argumentPrimitiveParser
 
-argumentsParser :: Parsec String st [Argument]
+argumentsParser :: ParserOf st [Argument]
 argumentsParser = argumentParser `sepBy` (spaces)
 
-prefixExpressionParser :: Parsec String st Expression
+prefixExpressionParser :: ParserOf st Expression
 prefixExpressionParser = do
   fnName <- identifierNameParser
   args   <- argumentsParser
   return $ Expression fnName args
 
-infixExpressionParser :: Parsec String st Expression
+infixExpressionParser :: ParserOf st Expression
 infixExpressionParser = do
   arg1   <- argumentParser
   fnName <- identifierNameParser
   arg2   <- argumentParser
   return $ Expression fnName [arg1, arg2]
 
-expressionParser :: Parsec String st Expression
+expressionParser :: ParserOf st Expression
 expressionParser = prefixExpressionParser <|> infixExpressionParser
 
-functionDefinitionParser :: Parsec String st FunctionDef
+functionDefinitionParser :: ParserOf st FunctionDef
 functionDefinitionParser = do
   sources <- identifiersParser
   _       <- spaces

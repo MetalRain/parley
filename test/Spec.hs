@@ -3,6 +3,7 @@ import Test.QuickCheck
 import Control.Exception (evaluate)
 import Lib
 import Data.Either
+import Data.Ratio ((%))
 
 main :: IO ()
 main = hspec $ do
@@ -90,3 +91,62 @@ main = hspec $ do
 
     it "reject plus signs" $ do
       isLeft $ testParser integerParser "+8"
+
+  describe "scalarParser" $ do
+    it "accepts fraction" $ do
+      testParser scalarParser "2 / 3" `shouldBe` (Right (mkScalar 2 3))
+
+    it "accepts fraction without space" $ do
+      testParser scalarParser "3/9" `shouldBe` (Right (mkScalar 3 9))
+
+    it "accepts zero numerator" $ do
+      testParser scalarParser "0 / 3" `shouldBe` (Right (mkScalar 0 3))
+
+    it "accepts negative numerator" $ do
+      testParser scalarParser "-1 / 5" `shouldBe` (Right (mkScalar (-1) 5))
+
+    it "rejects zero denumerator" $ do
+      isLeft $ testParser scalarParser "2 / 0"
+
+    it "rejects negative denumerator" $ do
+      isLeft $ testParser scalarParser "1 / -2"
+
+    it "rejects missing numerator" $ do
+      isLeft $ testParser scalarParser " / 1"
+
+    it "rejects missing denumerator" $ do
+      isLeft $ testParser scalarParser "1 / "
+
+  describe "vectorParser" $ do
+    it "accepts integer vector" $ do
+      testParser vectorParser "(1, 2, 3)" `shouldBe` (Right (TVector 3 [PrimInt 1, PrimInt 2, PrimInt 3]))
+
+    it "accepts vector without spaces" $ do
+      testParser vectorParser "(1,2,3)" `shouldBe` (Right (TVector 3 [PrimInt 1, PrimInt 2, PrimInt 3]))
+
+    it "accepts scalar vector" $ do
+      testParser vectorParser "(1/5, 2/1, 1/3, 1/4)" `shouldBe` (Right (TVector 4 
+        [ (PrimScalar (mkScalar 1 5))
+        , (PrimScalar (mkScalar 2 1))
+        , (PrimScalar (mkScalar 1 3))
+        , (PrimScalar (mkScalar 1 4))
+        ]))
+
+    it "accepts nested integer vectors" $ do
+      testParser vectorParser "((1, 2), (3, 4), (5, 6))" `shouldBe` (Right (TVector 3 
+        [ PrimVector (TVector 2 [PrimInt 1, PrimInt 2])
+        , PrimVector (TVector 2 [PrimInt 3, PrimInt 4])
+        , PrimVector (TVector 2 [PrimInt 5, PrimInt 6])
+        ]))
+
+    it "rejects missing left parens" $ do
+      isLeft $ testParser vectorParser "1,2)"
+
+    it "rejects missing right parens" $ do
+      isLeft $ testParser vectorParser "(1,2"
+
+    it "rejects missing commas" $ do
+      isLeft $ testParser vectorParser "(1 2)"
+
+    xit "reject mixed size nested vectors" $ do
+      isLeft $ testParser vectorParser "((1, 2), (3), ())"
