@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes, OverloadedStrings #-}
+
 import Test.Hspec
 import Test.QuickCheck
 import Control.Exception (evaluate)
@@ -150,3 +152,144 @@ main = hspec $ do
 
     xit "reject mixed size nested vectors" $ do
       isLeft $ testParser vectorParser "((1, 2), (3), ())"
+
+  describe "expressionParser" $ do
+    it "accepts prefix expression" $ do
+      testParser expressionParser "f 1 2" `shouldBe` (Right (Expression "f" 
+        [ ArgPrim (PrimInt 1)
+        , ArgPrim (PrimInt 2) 
+        ]))
+
+    it "accepts infix expression" $ do
+      testParser expressionParser "1 plus 2" `shouldBe` (Right (Expression "plus" 
+        [ ArgPrim (PrimInt 1)
+        , ArgPrim (PrimInt 2)
+        ]))
+
+    it "accepts identifiers as arguments" $ do
+      testParser expressionParser "f a b c" `shouldBe` (Right (Expression "f" 
+        [ ArgIdent "a"
+        , ArgIdent "b"
+        , ArgIdent "c"
+        ]))
+
+    it "accepts mixed argument prefix expressions" $ do
+      testParser expressionParser "f a 1 c" `shouldBe` (Right (Expression "f" 
+        [ ArgIdent "a"
+        , ArgPrim (PrimInt 1)
+        , ArgIdent "c"
+        ]))
+
+    it "rejects mixed argument infix expressions" $ do
+      isLeft $ testParser expressionParser "1 div a"
+
+    it "rejects invalid identifiers" $ do
+      isLeft $ testParser expressionParser "1 + 1"
+
+  describe "functionParser" $ do
+    it "accepts simple function" $ do
+      testParser functionParser "a: T b: S -> plus a b" `shouldBe` (Right (TFunction
+        [ (Identifier "a" (Type "T"))
+        , (Identifier "b" (Type "S"))
+        ] 
+        (Expression "plus" 
+          [ ArgIdent "a"
+          , ArgIdent "b"
+          ])
+        []))
+
+    it "accepts function with body" $ do
+      let program = "a: T b: S -> plus c d\n\
+                    \  c <- div a b\n\
+                    \  d <- mul a b"
+      testParser functionParser program `shouldBe` (Right (TFunction
+        [ (Identifier "a" (Type "T"))
+        , (Identifier "b" (Type "S"))
+        ] 
+        (Expression "plus" 
+          [ ArgIdent "c"
+          , ArgIdent "d"
+          ])
+        [ ExprAssign "c" (Expression "div" [ ArgIdent "a", ArgIdent "b" ])
+        , ExprAssign "d" (Expression "mul"  [ ArgIdent "a", ArgIdent "b" ])
+        ]))
+
+    it "can be used in vectorParser" $ do
+      testParser vectorParser "(a: T -> add a, b: S -> sub b)" `shouldBe` (Right (TVector 2
+        [ (PrimFunc (TFunction [ (Identifier "a" (Type "T")) ] (Expression "add" [ ArgIdent "a"]) []))
+        , (PrimFunc (TFunction [ (Identifier "b" (Type "S")) ] (Expression "sub" [ ArgIdent "b"]) []))
+        ]))
+
+    it "rejects untyped functions" $ do
+      isLeft $ testParser functionParser "a -> f a"
+
+    it "rejects partially typed functions" $ do
+      isLeft $ testParser functionParser "a: S b -> f b"
+
+    it "rejects functions without return" $ do
+      isLeft $ testParser functionParser "a: S b -> "
+
+    it "rejects functions without arguments" $ do
+      isLeft $ testParser functionParser "-> a"
+
+    xit "accepts primitives as return values" $ do
+      False -- Grammar needs some work
+      --testParser functionParser "a: T b: S -> (1, 2)" `shouldBe` (Right (TFunction
+      --  [ (Identifier "a" (Type "T"))
+      --  , (Identifier "b" (Type "S"))
+      --  ]
+      --  (TVector 2 [ PrimInt 1, PrimInt 2 ])))
+
+  describe "assignmentParser" $ do
+    it "accepts integer assignment" $ do
+      testParser assignmentParser "a = 1" `shouldBe` (Right (PrimAssign "a"
+        (PrimInt 1)))
+
+    it "accepts scalar assignment" $ do
+      testParser assignmentParser "a = 1/2" `shouldBe` (Right (PrimAssign "a"
+        (PrimScalar $ mkScalar 1 2)))
+
+    it "accepts vector assignment" $ do
+      testParser assignmentParser "a = (1,2)" `shouldBe` (Right (PrimAssign "a"
+        (PrimVector (TVector 2 [PrimInt 1, PrimInt 2]))))
+
+    it "accepts function assignment" $ do
+      testParser assignmentParser "a = a: X -> f a" `shouldBe` (Right (PrimAssign "a"
+        (PrimFunc (TFunction
+          [ Identifier "a" (Type "X") ]
+          ( Expression "f" [ ArgIdent "a" ] )
+          [] ))))
+
+  describe "programParser" $ do
+    -- TODO: Implement significant identation support
+    xit "accepts whole programs" $ do
+      let program = "v = (1, 2, 3)\n\
+                    \mul = a: Integer b: Integer -> mul a1 b1\n\
+                    \  a1 <- plus a a\n\
+                    \  b1 <- minus b 1\n\
+                    \square = a: Integer -> mul a a\n\
+                    \res <- map square v"
+      testParser programParser program `shouldBe` (Right 
+            [ PrimAssign "v" (PrimVector (TVector 3 [ PrimInt 1, PrimInt 2, PrimInt 3 ]))
+            , PrimAssign "mul" 
+              (PrimFunc ((TFunction
+                [ (Identifier "a" (Type "Integer"))
+                , (Identifier "b" (Type "Integer")) 
+                ]
+                (Expression "mul" 
+                  [ ArgIdent "a1"
+                  , ArgIdent "b1" ])
+                [ ExprAssign "a1" (Expression "plus" [ ArgIdent "a", ArgIdent "a" ]) 
+                , ExprAssign "b1" (Expression "minus" [ ArgIdent "b", ArgPrim (PrimInt 1) ])
+                ])))
+            , PrimAssign "square"
+              (PrimFunc ((TFunction
+                [ (Identifier "a" (Type "Integer"))
+                ]
+                (Expression "mul" 
+                  [ ArgIdent "a"
+                  , ArgIdent "a" ])
+                [])))
+            , ExprAssign "res" (Expression "map" [ ArgIdent "square", ArgIdent "v" ])
+            ])
+
