@@ -10,7 +10,8 @@ module Lib
     , expressionParser
     , functionParser
     , assignmentParser
-    , programParser
+    , linesParser
+    , swarmParser
     , testParser
     , Type(..)
     , Identifier(..)
@@ -23,12 +24,15 @@ module Lib
     , Expression(..)
     , Argument(..)
     , Assignment(..)
+    , Indentation(..)
+    , Line(..)
+    , Swarm(..)
     ) where
 
 import Data.Ratio ( (%) )
 import Text.Parsec.Char ( alphaNum, char, digit, endOfLine, lower, oneOf, spaces, string, upper )
 import Text.Parsec.Prim ( (<|>), Parsec(..), many, parse, try )
-import Text.Parsec.Combinator ( choice, eof, many1, notFollowedBy, option, sepBy, sepBy1 )
+import Text.Parsec.Combinator ( eof, lookAhead, many1, manyTill, notFollowedBy, option, parserTrace, parserTraced, sepBy, sepBy1 )
 
 type ParserOf st a = Parsec String st a
 
@@ -52,7 +56,7 @@ Function definition:
 IdentifierName = a: T b: T -> Expression
   Assignments 
 -}
-data TFunction = TFunction [Source] Expression Program deriving (Eq, Show)
+data TFunction = TFunction [Source] Expression deriving (Eq, Show)
 
 -- Syntax
 data Identifier = Identifier IdentifierName Type deriving (Eq, Show)
@@ -89,9 +93,10 @@ data Assignment = PrimAssign IdentifierName Primitive
                 | ExprAssign IdentifierName Expression
                  deriving (Eq, Show)
 
-type Program = [Assignment]
 
-
+type Indentation = Integer
+data Line = Line Indentation Assignment deriving (Eq, Show)
+data Swarm = Swarm Indentation Assignment [Swarm] deriving (Eq, Show)
 
 -- Utils
 
@@ -180,29 +185,12 @@ vectorParser = do
 vectorPrimParser :: ParserOf st Primitive
 vectorPrimParser = PrimVector <$> (trailingSpace vectorParser)
 
-
-functionLineParser :: String -> ParserOf st Assignment
-functionLineParser indent = do
-  _      <- endOfLine
-  _      <- string indent
-  line   <- assignmentParser
-  return line
-
-functionBodyParser :: ParserOf st Program
-functionBodyParser = do
-  _      <- endOfLine
-  indent <- many1 (char ' ')
-  line   <- assignmentParser
-  rest   <- many (try $ functionLineParser indent)
-  return $ (line : rest)
-
 functionParser :: ParserOf st TFunction
 functionParser = do
   sources <- many (identifierParser)
   _       <- trailingSpace (string "->")
   expr    <- trailingSpace expressionParser
-  body    <- option [] functionBodyParser
-  return $ TFunction sources expr body
+  return $ TFunction sources expr
 
 functionPrimParser :: ParserOf st Primitive
 functionPrimParser = PrimFunc <$> (trailingSpace functionParser)
@@ -216,7 +204,7 @@ argumentPrimitiveParser = ArgPrim <$> (trailingSpace primitiveParser)
 
 
 argumentParser :: ParserOf st Argument
-argumentParser = try argumentIdentifierParser
+argumentParser = (try argumentIdentifierParser)
                <|> argumentPrimitiveParser
 
 argumentsParser :: ParserOf st [Argument]
@@ -236,27 +224,59 @@ infixExpressionParser = do
   return $ Expression fnName [arg1, arg2]
 
 expressionParser :: ParserOf st Expression
-expressionParser = try prefixExpressionParser
-                 <|> infixExpressionParser
+expressionParser = (try prefixExpressionParser) <|> infixExpressionParser
 
 
-primAssignParser :: ParserOf st Assignment
-primAssignParser = do
-  ident <- trailingSpace identifierNameParser
+primAssignParser :: String -> ParserOf st Assignment
+primAssignParser ident = do
   _     <- trailingSpace (string "=")
   prim  <- trailingSpace primitiveParser
   return $ PrimAssign ident prim
 
-primExprParser :: ParserOf st Assignment
-primExprParser = do
-  ident <- trailingSpace identifierNameParser
+primExprParser :: String -> ParserOf st Assignment
+primExprParser ident = do
   _     <- trailingSpace (string "<-")
   expr  <- trailingSpace expressionParser
   return $ ExprAssign ident expr
 
 assignmentParser :: ParserOf st Assignment
-assignmentParser = try primAssignParser 
-                 <|> primExprParser                 
+assignmentParser = do
+  ident <- trailingSpace identifierNameParser
+  a     <- (try $ primAssignParser ident) <|> (primExprParser ident)
+  return a
 
-programParser :: ParserOf st Program
-programParser = (trailingSpace assignmentParser) `sepBy1` endOfLine
+lineParser :: ParserOf st Line
+lineParser = do
+  indent     <- many (char ' ')
+  assignment <- trailingSpace assignmentParser
+  return $ Line (toInteger $ length indent) assignment
+
+linesParser :: ParserOf st [Line]
+linesParser = do
+  lines <- lineParser `sepBy` endOfLine
+  _     <- eof
+  return lines
+
+
+isLeafer :: Indentation -> Line -> Bool
+isLeafer currentLevel (Line nextLevel _) = currentLevel <= nextLevel
+
+buildSwarm :: Swarm -> [Line] -> [Swarm]
+buildSwarm current@(Swarm level a children) tail@(next@(Line nextLevel b):rest)
+  -- next is closer to root, current is leaf
+  | level > nextLevel = [ current ]
+  -- next is same level, continue building swarm
+  | level == nextLevel = ( current : buildSwarm (Swarm nextLevel b []) rest)
+  -- next is child of current, take rest until it's not leaf anymore
+  | level < nextLevel = [Swarm level a $ children ++ (buildSwarm (Swarm nextLevel b []) (takeWhile (isLeafer level) rest))]
+-- no more lines, current is leaf
+buildSwarm current [] = [ current ]
+
+
+
+
+swarmParser :: ParserOf st [Swarm]
+swarmParser = do
+  lines <- linesParser
+  let ((Line level a):rest) = lines
+  return $ buildSwarm (Swarm level a []) rest

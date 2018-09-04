@@ -1,11 +1,7 @@
-{-# LANGUAGE QuasiQuotes, OverloadedStrings #-}
-
 import Test.Hspec
 import Test.QuickCheck
-import Control.Exception (evaluate)
 import Lib
-import Data.Either
-import Data.Ratio ((%))
+import Data.Either (Either(..), isLeft)
 
 main :: IO ()
 main = hspec $ do
@@ -192,32 +188,12 @@ main = hspec $ do
         [ (Identifier "a" (Type "T"))
         , (Identifier "b" (Type "S"))
         ] 
-        (Expression "plus" 
-          [ ArgIdent "a"
-          , ArgIdent "b"
-          ])
-        []))
-
-    it "accepts function with body" $ do
-      let program = "a: T b: S -> plus c d\n\
-                    \  c <- div a b\n\
-                    \  d <- mul a b"
-      testParser functionParser program `shouldBe` (Right (TFunction
-        [ (Identifier "a" (Type "T"))
-        , (Identifier "b" (Type "S"))
-        ] 
-        (Expression "plus" 
-          [ ArgIdent "c"
-          , ArgIdent "d"
-          ])
-        [ ExprAssign "c" (Expression "div" [ ArgIdent "a", ArgIdent "b" ])
-        , ExprAssign "d" (Expression "mul"  [ ArgIdent "a", ArgIdent "b" ])
-        ]))
+        (Expression "plus" [ ArgIdent "a", ArgIdent "b" ])))
 
     it "can be used in vectorParser" $ do
       testParser vectorParser "(a: T -> add a, b: S -> sub b)" `shouldBe` (Right (TVector 2
-        [ (PrimFunc (TFunction [ (Identifier "a" (Type "T")) ] (Expression "add" [ ArgIdent "a"]) []))
-        , (PrimFunc (TFunction [ (Identifier "b" (Type "S")) ] (Expression "sub" [ ArgIdent "b"]) []))
+        [ (PrimFunc (TFunction [ (Identifier "a" (Type "T")) ] (Expression "add" [ ArgIdent "a"])))
+        , (PrimFunc (TFunction [ (Identifier "b" (Type "S")) ] (Expression "sub" [ ArgIdent "b"])))
         ]))
 
     it "rejects untyped functions" $ do
@@ -257,39 +233,52 @@ main = hspec $ do
       testParser assignmentParser "a = a: X -> f a" `shouldBe` (Right (PrimAssign "a"
         (PrimFunc (TFunction
           [ Identifier "a" (Type "X") ]
-          ( Expression "f" [ ArgIdent "a" ] )
-          [] ))))
+          ( Expression "f" [ ArgIdent "a" ] )))))
 
-  describe "programParser" $ do
-    -- TODO: Implement significant identation support
-    xit "accepts whole programs" $ do
+  describe "linesParser" $ do
+    it "accepts single line" $ do
+      testParser linesParser "a = 1" `shouldBe` (Right
+        [ Line 0 (PrimAssign "a" (PrimInt 1)) ]) 
+
+    it "accepts program line by line" $ do
       let program = "v = (1, 2, 3)\n\
                     \mul = a: Integer b: Integer -> mul a1 b1\n\
                     \  a1 <- plus a a\n\
                     \  b1 <- minus b 1\n\
                     \square = a: Integer -> mul a a\n\
                     \res <- map square v"
-      testParser programParser program `shouldBe` (Right 
-            [ PrimAssign "v" (PrimVector (TVector 3 [ PrimInt 1, PrimInt 2, PrimInt 3 ]))
-            , PrimAssign "mul" 
-              (PrimFunc ((TFunction
-                [ (Identifier "a" (Type "Integer"))
-                , (Identifier "b" (Type "Integer")) 
-                ]
-                (Expression "mul" 
-                  [ ArgIdent "a1"
-                  , ArgIdent "b1" ])
-                [ ExprAssign "a1" (Expression "plus" [ ArgIdent "a", ArgIdent "a" ]) 
-                , ExprAssign "b1" (Expression "minus" [ ArgIdent "b", ArgPrim (PrimInt 1) ])
-                ])))
-            , PrimAssign "square"
-              (PrimFunc ((TFunction
-                [ (Identifier "a" (Type "Integer"))
-                ]
-                (Expression "mul" 
-                  [ ArgIdent "a"
-                  , ArgIdent "a" ])
-                [])))
-            , ExprAssign "res" (Expression "map" [ ArgIdent "square", ArgIdent "v" ])
+      testParser linesParser program `shouldBe` (Right 
+            [ Line 0 (PrimAssign "v" (PrimVector (TVector 3 [ PrimInt 1, PrimInt 2, PrimInt 3 ])))
+            , Line 0 (PrimAssign "mul" (PrimFunc (TFunction
+              [ (Identifier "a" (Type "Integer")), (Identifier "b" (Type "Integer")) ]
+              (Expression "mul" [ ArgIdent "a1" , ArgIdent "b1" ]))))
+            , Line 2 (ExprAssign "a1" (Expression "plus" [ ArgIdent "a", ArgIdent "a" ])) 
+            , Line 2 (ExprAssign "b1" (Expression "minus" [ ArgIdent "b", ArgPrim (PrimInt 1) ]))
+            , Line 0 (PrimAssign "square" (PrimFunc (TFunction
+              [ (Identifier "a" (Type "Integer")) ]
+              (Expression "mul" [ ArgIdent "a", ArgIdent "a" ]))))
+            , Line 0 (ExprAssign "res" (Expression "map" [ ArgIdent "square", ArgIdent "v" ]))
             ])
 
+  describe "swarmParser" $ do
+    it "builds swarm tree" $ do
+      let program = "main = a: T -> id d\n\
+                    \  d <- id b\n\
+                    \  b <- id c\n\
+                    \    c = 1"
+      testParser swarmParser program `shouldBe` (Right
+        [(Swarm 0
+          (PrimAssign "main" (PrimFunc (TFunction
+            [ (Identifier "a" (Type "T")) ]
+            (Expression "id" [ ArgIdent "d" ]))))
+          [ (Swarm 2
+              (ExprAssign "d" (Expression "id" [ ArgIdent "b" ]))
+              [])
+          , (Swarm 2
+              (ExprAssign "b" (Expression "id" [ ArgIdent "c" ]))
+            [ (Swarm 4
+                (PrimAssign "c" (PrimInt 1))
+                []
+              )
+            ])
+          ])])
