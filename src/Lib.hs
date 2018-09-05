@@ -257,7 +257,6 @@ linesParser = do
   _     <- eof
   return lines
 
-
 isLeafer :: Indentation -> Line -> Bool
 isLeafer currentLevel (Line nextLevel _) = currentLevel <= nextLevel
 
@@ -271,9 +270,6 @@ buildSwarm current@(Swarm level a children) tail@(next@(Line nextLevel b):rest)
   | level < nextLevel = [Swarm level a $ children ++ (buildSwarm (Swarm nextLevel b []) (takeWhile (isLeafer level) rest))]
 -- no more lines, current is leaf
 buildSwarm current [] = [ current ]
-
-
-
 
 swarmParser :: ParserOf st [Swarm]
 swarmParser = do
