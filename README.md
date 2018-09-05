@@ -15,7 +15,7 @@ See [TODO](doc/todo.md) for more details.
 WIP
 See [syntax](doc/syntax.md).
 
-Early prototypes of programs [syntax](doc/examples.md).
+Early prototypes of programs in [examples](doc/examples.md). Actual "programs" in [tests](test/Spec.hs).
 
 ## Requirements
 

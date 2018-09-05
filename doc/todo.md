@@ -3,7 +3,7 @@
 Must have:
 - Parse tree -> action tree
 - Conditional execution (if else)
-- Identifier matching, ccopes, closures
+- Identifier matching, scopes, closures
 - Type system
 - Typechecking
 - Interpreter
