@@ -18,6 +18,9 @@ spec = do
     it "returns sized type for vectors" $ do
       primType (PrimVector (TVector 2 [PrimInt 3, PrimInt 4])) `shouldBe` (SizedType "Vector" 2 (Type "Integer"))
 
+    it "returns sized type for empty vectors" $ do
+      primType (PrimVector (TVector 0 [])) `shouldBe` (SizedType "Vector" 0 (AnyType))
+
     it "returns nested type for functions" $ do
       primType (PrimFunc (TFunction 
         [ Identifier "a" (Type "T")
