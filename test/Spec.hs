@@ -1,6 +1,6 @@
 import Test.Hspec
 import Test.QuickCheck
-import Lib
+import Parser
 import Data.Either (Either(..), isLeft)
 
 main :: IO ()
@@ -260,23 +260,23 @@ main = hspec $ do
             , Line 0 (ExprAssign "res" (Expression "map" [ ArgIdent "square", ArgIdent "v" ]))
             ])
 
-  describe "swarmParser" $ do
-    it "builds swarm tree" $ do
+  describe "lineGroupParser" $ do
+    it "builds linegroup tree" $ do
       let program = "main = a: T -> id d\n\
                     \  d <- id b\n\
                     \  b <- id c\n\
                     \    c = 1"
-      testParser swarmParser program `shouldBe` (Right
-        [(Swarm 0
+      testParser lineGroupParser program `shouldBe` (Right
+        [(LineGroup 0
           (PrimAssign "main" (PrimFunc (TFunction
             [ (Identifier "a" (Type "T")) ]
             (Expression "id" [ ArgIdent "d" ]))))
-          [ (Swarm 2
+          [ (LineGroup 2
               (ExprAssign "d" (Expression "id" [ ArgIdent "b" ]))
               [])
-          , (Swarm 2
+          , (LineGroup 2
               (ExprAssign "b" (Expression "id" [ ArgIdent "c" ]))
-            [ (Swarm 4
+            [ (LineGroup 4
                 (PrimAssign "c" (PrimInt 1))
                 []
               )

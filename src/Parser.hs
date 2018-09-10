@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Lib
+module Parser
     ( identifierNameParser
     , typeNameParser
     , identifierParser
@@ -11,7 +11,7 @@ module Lib
     , functionParser
     , assignmentParser
     , linesParser
-    , swarmParser
+    , lineGroupParser
     , testParser
     , Type(..)
     , Identifier(..)
@@ -26,7 +26,7 @@ module Lib
     , Assignment(..)
     , Indentation(..)
     , Line(..)
-    , Swarm(..)
+    , LineGroup(..)
     ) where
 
 import Data.Ratio ( (%) )
@@ -49,8 +49,7 @@ type TInteger = Integer
 type TScalar = Rational
 data TVector = TVector TInteger [Primitive] deriving (Eq, Show)
 
-type Source = Identifier              
-type Sink = Identifier
+type Source = Identifier
 {-
 Function definition:
 IdentifierName = a: T b: T -> Expression
@@ -96,7 +95,7 @@ data Assignment = PrimAssign IdentifierName Primitive
 
 type Indentation = Integer
 data Line = Line Indentation Assignment deriving (Eq, Show)
-data Swarm = Swarm Indentation Assignment [Swarm] deriving (Eq, Show)
+data LineGroup = LineGroup Indentation Assignment [LineGroup] deriving (Eq, Show)
 
 -- Utils
 
@@ -260,19 +259,19 @@ linesParser = do
 isLeafer :: Indentation -> Line -> Bool
 isLeafer currentLevel (Line nextLevel _) = currentLevel <= nextLevel
 
-buildSwarm :: Swarm -> [Line] -> [Swarm]
-buildSwarm current@(Swarm level a children) tail@(next@(Line nextLevel b):rest)
+buildLineGroup :: LineGroup -> [Line] -> [LineGroup]
+buildLineGroup current@(LineGroup level a children) tail@(next@(Line nextLevel b):rest)
   -- next is closer to root, current is leaf
   | level > nextLevel = [ current ]
-  -- next is same level, continue building swarm
-  | level == nextLevel = ( current : buildSwarm (Swarm nextLevel b []) rest)
+  -- next is same level, continue building LineGroup
+  | level == nextLevel = ( current : buildLineGroup (LineGroup nextLevel b []) rest)
   -- next is child of current, take rest until it's not leaf anymore
-  | level < nextLevel = [Swarm level a $ children ++ (buildSwarm (Swarm nextLevel b []) (takeWhile (isLeafer level) rest))]
+  | level < nextLevel = [LineGroup level a $ children ++ (buildLineGroup (LineGroup nextLevel b []) (takeWhile (isLeafer level) rest))]
 -- no more lines, current is leaf
-buildSwarm current [] = [ current ]
+buildLineGroup current [] = [ current ]
 
-swarmParser :: ParserOf st [Swarm]
-swarmParser = do
+lineGroupParser :: ParserOf st [LineGroup]
+lineGroupParser = do
   lines <- linesParser
   let ((Line level a):rest) = lines
-  return $ buildSwarm (Swarm level a []) rest
+  return $ buildLineGroup (LineGroup level a []) rest

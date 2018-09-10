@@ -4,7 +4,7 @@
 
 Identifiers refer to values, identifier names must:
 - have only alphanumeric values
-- start with small alpha
+- start with small letter
 
 ## Primitives
 

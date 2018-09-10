@@ -1,19 +1,18 @@
 # Parley
 
-Functional language inspired by [Haskell](https://www.haskell.org/), [LISP](https://en.wikipedia.org/wiki/Lisp_(programming_language)) and [SSA](https://en.wikipedia.org/wiki/Static_single_assignment_form). Focuses on making parallel execution simple & possible by using single assignment form and referential transparency.
+Functional language inspired by [Haskell](https://www.haskell.org/) and [LISP](https://en.wikipedia.org/wiki/Lisp_(programming_language)). Tries to make out of order (and parallel) execution more likely by giving less guarantees about order of execution.
 
-Long term plan is to produce frontend to [LLVM](https://llvm.org/) to build robust compiler once language grammar and syntax have been found. 
+Long term plan is to produce frontend to [LLVM](https://llvm.org/) but only when language semantics and syntax have been settled down.
 
 ## Status
 
-Language is still very much in progress, not usable for any useful programs.
+Language is still very much in progress, there is only incomplete parser and many things like iteration or conditionals are not though out or implemented.
 
 See [TODO](doc/todo.md) for more details.
 
 ## Syntax
 
-WIP
-See [syntax](doc/syntax.md).
+See [syntax](doc/syntax.md) for more details.
 
 Early prototypes of programs in [examples](doc/examples.md). Actual "programs" in [tests](test/Spec.hs).
 
