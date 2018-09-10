@@ -13,6 +13,12 @@ module Parser
     , linesParser
     , lineGroupParser
     , testParser
+    , mkScalar
+    ) where
+
+import Types
+    ( TypeName
+    , IdentifierName
     , Type(..)
     , Identifier(..)
     , TInteger
@@ -27,77 +33,14 @@ module Parser
     , Indentation(..)
     , Line(..)
     , LineGroup(..)
-    ) where
+    )
 
-import Data.Ratio ( (%) )
 import Text.Parsec.Char ( alphaNum, char, digit, endOfLine, lower, oneOf, spaces, string, upper )
-import Text.Parsec.Prim ( (<|>), Parsec(..), many, parse, try )
+import Text.Parsec.Prim ( Parsec(..), (<|>), many, parse, try )
 import Text.Parsec.Combinator ( eof, lookAhead, many1, manyTill, notFollowedBy, option, parserTrace, parserTraced, sepBy, sepBy1 )
 
-type ParserOf st a = Parsec String st a
-
-type TypeName = String
-type IdentifierName = String
-type FunctionName = IdentifierName
-
-data Type = Type TypeName deriving (Eq, Show)
-type InputType = Type
-type OutputType = Type
-
--- Primary types
-type TInteger = Integer
-type TScalar = Rational
-data TVector = TVector TInteger [Primitive] deriving (Eq, Show)
-
-type Source = Identifier
-{-
-Function definition:
-IdentifierName = a: T b: T -> Expression
-  Assignments 
--}
-data TFunction = TFunction [Source] Expression deriving (Eq, Show)
-
--- Syntax
-data Identifier = Identifier IdentifierName Type deriving (Eq, Show)
-data Primitive = PrimInt TInteger
-               | PrimScalar TScalar
-               | PrimVector TVector
-               | PrimFunc TFunction
-                deriving (Eq, Show)
-data Argument = ArgIdent IdentifierName
-              | ArgPrim Primitive
-               deriving (Eq, Show)
-
-
-{- 
-Expressions:
-1 plus 2
-f 1 2
-f (1,2,3) a
--}
-data Expression = Expression FunctionName [Argument] deriving (Eq, Show)
-
-
-{-
-Assignment:
-a = 1
-b = 2.1
-c = (1, 2, 4)
-d = a b -> a + b
-
-Evaluation:
-a <- Expression
--}
-data Assignment = PrimAssign IdentifierName Primitive
-                | ExprAssign IdentifierName Expression
-                 deriving (Eq, Show)
-
-
-type Indentation = Integer
-data Line = Line Indentation Assignment deriving (Eq, Show)
-data LineGroup = LineGroup Indentation Assignment [LineGroup] deriving (Eq, Show)
-
 -- Utils
+type ParserOf st a = Parsec String st a
 
 testParser p = parse p ""
 
@@ -106,9 +49,6 @@ trailingSpace p = do
   r <- p
   _ <- many (oneOf " ")
   return r
-
-mkScalar :: (Integral a) => a -> a -> TScalar
-mkScalar a b  = (fromIntegral a) % (fromIntegral b)
 
 -- Parsers
 
@@ -163,7 +103,7 @@ scalarParser = do
   numerator   <- trailingSpace integerParser
   _           <- trailingSpace (string "/")
   denominator <- trailingSpace posIntegerParser
-  return $ (fromIntegral numerator) % (fromIntegral denominator)
+  return $ mkScalar numerator denominator
 
 scalarPrimParser :: ParserOf st Primitive
 scalarPrimParser = PrimScalar <$> (trailingSpace scalarParser)

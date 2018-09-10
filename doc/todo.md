@@ -2,8 +2,9 @@
 
 Must have:
 - Parse tree -> action tree
-- Conditional execution (if else)
 - Identifier matching, scopes, closures
+- Conditional execution (if else)
+- Comments
 - Type system
 - Typechecking
 - Interpreter
