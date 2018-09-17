@@ -3,6 +3,7 @@ module Types
     , IdentifierName
     , FunctionName
     , Type(..)
+    , Context
     , Identifier(..)
     , TInteger
     , TScalar
@@ -15,19 +16,28 @@ module Types
     , Indentation
     , Line(..)
     , LineGroup(..)
+    , AST(..)
     , mkScalar
+    , mkContext
     ) where
 
 import Data.Ratio ( (%) )
+import qualified Data.Map.Strict as Map
 
 type TypeName = String
 type IdentifierName = String
 type FunctionName = IdentifierName
+type PrimOpName = IdentifierName
 
 data Type = AnyType
           | Type TypeName
           | SizedType TypeName Integer Type
           | NestedType TypeName [Type] deriving (Eq, Show)
+
+type Context = Map.Map IdentifierName Type
+mkContext :: [(IdentifierName, Type)] -> Context
+mkContext xs = Map.fromList xs
+
 
 -- Primary types
 type TInteger = Integer
@@ -47,6 +57,7 @@ IdentifierName = a: T b: T -> Expression
 data TFunction = TFunction [Source] Expression deriving (Eq, Show)
 
 
+
 data Primitive = PrimInt TInteger
                | PrimScalar TScalar
                | PrimVector TVector
@@ -63,7 +74,8 @@ Expressions:
 f 1 2
 f (1,2,3) a
 -}
-data Expression = Expression FunctionName [Argument] deriving (Eq, Show)
+data Expression = Expression FunctionName [Argument]
+                | NativeExpression PrimOpName [Type] Type deriving (Eq, Show)
 
 
 {-
@@ -84,3 +96,4 @@ data Assignment = PrimAssign IdentifierName Primitive
 type Indentation = Integer
 data Line = Line Indentation Assignment deriving (Eq, Show)
 data LineGroup = LineGroup Indentation Assignment [LineGroup] deriving (Eq, Show)
+data AST = AST Assignment Context [AST] deriving (Eq, Show)
