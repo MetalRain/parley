@@ -14,6 +14,7 @@ module Parser
     , lineGroupParser
     , testParser
     , mkScalar
+    , programHeader
     ) where
 
 import Types
@@ -215,3 +216,6 @@ lineGroupParser = do
   lines <- linesParser
   let ((Line level a):rest) = lines
   return $ buildLineGroup (LineGroup level a []) rest
+
+programHeader :: [LineGroup] -> LineGroup
+programHeader lgs = LineGroup 0 (ExprAssign "stdout" (Expression "main" [ArgIdent "stdin"])) lgs

@@ -1,0 +1,2 @@
+main = a: Integer b: Integer -> id sum
+  sum <- plus a b

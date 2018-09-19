@@ -12,14 +12,13 @@ See [TODO](doc/todo.md) for more details.
 
 ## Syntax
 
-See [syntax](doc/syntax.md) for more details.
-
-Early prototypes of programs in [examples](doc/examples.md). Actual "programs" in [tests](test/Spec.hs).
+See [syntax](doc/syntax.md) for more details, some valid programs in [examples](examples/).
 
 ## Requirements
 
 - [Stack](https://docs.haskellstack.org/en/stable/README/) build system for Haskell
 - GHC Haskell 8.X.X
+- LLVM 6.0
 
 ## Tests
 

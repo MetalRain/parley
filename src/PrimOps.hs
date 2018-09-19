@@ -22,7 +22,7 @@ import PrimTypes
   )
 
 primOps :: [Expression]
-primOps = [ plus, minus, mul ]
+primOps = [ plus, minus, mul, PrimOps.id ]
 
 plus :: Expression
 plus = NativeExpression "plus" [integer] integer
@@ -33,5 +33,9 @@ minus = NativeExpression "minus" [integer] integer
 mul :: Expression
 mul = NativeExpression "mul" [integer] integer
 
+id :: Expression
+id = NativeExpression "id" [UnresolvedType] UnresolvedType
+
 sizedOps :: IdentifierName -> Integer -> Type -> Expression
 sizedOps "join" n ofType = NativeExpression "join" [ofType, (vector n ofType)] (vector (n + 1) ofType)
+sizedOps "get"  n ofType = NativeExpression "get" [integer, (vector n ofType)] ofType

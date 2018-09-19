@@ -29,7 +29,7 @@ type IdentifierName = String
 type FunctionName = IdentifierName
 type PrimOpName = IdentifierName
 
-data Type = AnyType
+data Type = UnresolvedType
           | Type TypeName
           | SizedType TypeName Integer Type
           | NestedType TypeName [Type] deriving (Eq, Show)

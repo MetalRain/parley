@@ -22,7 +22,7 @@ spec = do
       primType ctx (PrimVector (TVector 2 [PrimInt 3, PrimInt 4])) `shouldBe` Right (vector 2 integer)
 
     it "returns sized type for empty vectors" $ do
-      primType ctx (PrimVector (TVector 0 [])) `shouldBe` Right (vector 0 (AnyType))
+      primType ctx (PrimVector (TVector 0 [])) `shouldBe` Right (vector 0 (UnresolvedType))
 
     it "returns & evaluates nested types for functions" $ do
       let t = Type "T"
@@ -45,7 +45,7 @@ spec = do
       let e = (Expression "plus" [ ArgIdent "b" , ArgIdent "c" ])
       let a = (ExprAssign "a" e)
       let lg = (LineGroup 0 a [])
-      let expected = enhanceErrorTrace (notDefined ctx e "c") a
+      let expected = enhanceErrorTrace (notDefined (inheritContext ctx $ mkContext [("a", UnresolvedType)]) e "c") a
       resolveTypes ctx lg `shouldBe` (Left expected)
 
     it "detects missing primOps" $ do

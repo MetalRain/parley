@@ -1,44 +1,61 @@
-# Syntax
+# Grammar
 
-## Data types
+## Identifiers
 
-Type names (and aliases) are capitalized.
+Identifiers refer to values, identifier names must:
+- have only alphanumeric values
+- start with small letter
 
-Integers
+## Primitives
+
+Language has following primitive types
+- Integer
+- Scalar
+- Vector
+- Function
+
+### Assignment
+
+Primitives are assigned to identifiers with =
+
 ```
-a = -5
-b = 10
+a = (1, 2)
+b = 45
+c = 1 / 3
+f = a b -> plus a b
 ```
 
-Scalars
+### Integer
+
+Integers are arbitrary size integers: -infinity to infinity.
+
+### Scalar
+
+Arbitrary precision rational numbers.
+
 ```
-a = 100 / 10
-b = 3 / 1
+1 / 3
+40 / 100
 ```
 
-Vectors
+### Vector
+Vectors are linear memory regions, values are accessed by zero indexed positions.
+
 ```
 v = (1, 2, 3)
-u = ()
+
+x <- idx v 2
+# x = 3
+
+y <- idx v 3
+# Compilation error, since type v = Vector(3, Integer)
 ```
 
-Functions
-```
-f = x: Integer y: Integer -> plus x y
-id = a: T -> a
-```
+### Function
 
-## Primitive vs Expression
-
-Expression evaluation can take arbitary time, so primitives
-and expressions are assigned with different syntax
+Functions return single value using inputs and previously assigned identifiers.
 ```
-# Primitive assignment
-arg = 5
-fun = otherFunc
-
-# Expression assignment
-v <- fun arg arg arg
+f = a: Integer -> plus a 1
 ```
 
 ## Significant indentation
@@ -59,7 +76,8 @@ d <- h b a
 b <- f a
 ```
 
-## WIP
+## Future ideas
+
 
 ### Type aliases
 
@@ -73,19 +91,50 @@ m = ((1, 2, 3, 4),
 type m = Matrix(3, 4, Integer)
 ```
 
+### Recursion
+
+```
+# Recursion is fine
+g = f: Function x: T -> h x
+  h = y:  -> g f y
+```
+
+### Vector destructuring
+
+Vectors can be destructured with v..
+This is used for append, prepend, concat, variable amount argument application 
+```
+v = (1, 2, 3)
+f v..
+# Is same as
+f 1 2 3
+
+vv = (v.., v..)
+# vv = (1, 2, 3, 1, 2, 3)
+
+m = (v, v)
+# m = ((1, 2, 3), (1, 2, 3))
+```
+
+
 ### Streams
 
-Streams have length and type, evaluated lazily
+Streams are lazy value generators.
+
+Stream construction from primitive:
 ```
-xs: Stream(3, Integer) in (1, 2, 3)
+v = (1, 2, 3, 4, 5, 6, 7)
+x <- in v
 ```
 
-Streams allow loading data in chunks
+Stream construction by recursion:
 ```
-window: Stream(2000000, )
+v <- in res
+  res <- join (1, 2, 3) v
 ```
+
 Streams can be their own consumers
 ```
-repeat v: Vector(N, T) <- vs: Stream(Inf, T)
-  vs in (v, vs..)
+repeat x: Vector(N, T) -> s: Stream(T)
+  s <- in (v, s..)
 ```
