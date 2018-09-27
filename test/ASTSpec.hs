@@ -25,12 +25,13 @@ spec = do
       primType ctx (PrimVector (TVector 0 [])) `shouldBe` Right (vector 0 (UnresolvedType))
 
     it "returns & evaluates nested types for functions" $ do
-      let t = Type "T"
-      let vt = (vector 1 t)
+      let t = VariableType "t"
+      let size = VariableType "n"
+      let vt = (laxVector size t)
       -- Integer simulates boolean
-      let ctx = mkContext [ ("contains", (function [vector 1 t, t, integer]))
+      let ctx = mkContext [ ("contains", (function [vt, t, integer]))
                           , ("a", integer)
-                          , ("v", vector 2 integer)
+                          , ("v", vector 1 integer)
                           ]
       primType ctx (PrimFunc (TFunction 
         [ Identifier "a" t
@@ -54,4 +55,12 @@ spec = do
       let a = (ExprAssign "a" e)
       let lg = (LineGroup 0 a [])
       let expected = enhanceErrorTrace (notDefined ctx e "plus") a
+      resolveTypes ctx lg `shouldBe` (Left expected)
+
+    it "detects invalid arguments" $ do
+      let ctx = mkContext [("f", function [integer]), ("b", scalar)]
+      let e = (Expression "f" [ ArgIdent "b"])
+      let a = (ExprAssign "a" e)
+      let lg = (LineGroup 0 a [])
+      let expected = enhanceErrorTrace (typeMismatchError (inheritContext ctx $ mkContext [("a", UnresolvedType)]) e [integer] [scalar]) a
       resolveTypes ctx lg `shouldBe` (Left expected)

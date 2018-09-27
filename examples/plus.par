@@ -1,2 +1,3 @@
-main = a: Integer b: Integer -> id sum
-  sum <- plus a b
+main = stdin: stream -> plus a b
+  a <- get stdin 0
+  b <- get stdin 1
