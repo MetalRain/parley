@@ -6,9 +6,9 @@ Identifiers refer to values, identifier names must:
 - have only alphanumeric values
 - start with small letter
 
-## Primitives
+## Primitive types
 
-Language has following primitive types
+Language has following primitive types:
 - Integer
 - Scalar
 - Vector
@@ -48,7 +48,7 @@ x <- idx v 2
 # x = 3
 
 y <- idx v 3
-# Compilation error, since type v = Vector(3, Integer)
+# Compilation error, since v: Vector(3, Integer)
 ```
 
 ### Function
@@ -57,6 +57,80 @@ Functions return single value using inputs and previously assigned identifiers.
 ```
 f = a: Integer -> plus a 1
 ```
+
+## Expresions
+
+All expressions are function evaluations that assign value to identifier.
+```
+a <- f b
+
+stdout <- print 1
+```
+
+## Type system
+
+Types can be either:
+- [Primitive types](#Primitive_types)
+- Data types
+- Nested types
+- Type variables
+- Type aliases
+
+### Data types
+
+Data types are primitives that are used as types.
+
+Data types can be used to:
+- create termination conditions to recursive functions.
+- create own vector like types, such as enums and records.
+```
+fib n: Data(1) -> 0
+fib n: Data(2) -> 1
+fib n: Integer -> plus f1 f2
+  n1 <- sub n 1
+  n2 <- sub n 2
+  f1 <- fib n1
+  f2 <- fib n2
+```
+
+### Nested types
+
+Nested types give name to list of other types.
+
+Function is nested type, which defines argument types and output type.
+```
+f = a: Integer b: Integer -> plus a b # f: Function(Integer, Integer, Integer)
+```
+
+Vector is a nested type, which defines vector length and type of contents.
+```
+v = (1, 2, 3) # v: Vector(3, Integer)
+```
+
+### Type variables
+
+When function doesn't care about type of argument, type variables can be used.
+Type variables are universal in context they are defined, while type identifiers
+are not in same namespace as value identifiers, it's better to avoid confusion and use
+non-overlapping names.
+
+```
+concat = t: tt v: Vector(n, tt) -> join t v
+```
+
+### Type aliases
+
+Types can be composed by giving them less verbose aliases.
+
+```
+alias Matrix(n, m, t) = Vector(n, Vector(m, t))
+
+m = ((1, 2, 3, 4),
+     (2, 4, 5, 2),
+     (4, 5, 3, 4))
+# m : Matrix(3, 4, Integer)
+```
+
 
 ## Significant indentation
 
@@ -79,17 +153,6 @@ b <- f a
 ## Future ideas
 
 
-### Type aliases
-
-Matrices
-```
-alias Matrix(N, M, T) = Vector(N, Vector(M, T))
-
-m = ((1, 2, 3, 4),
-     (2, 4, 5, 2),
-     (4, 5, 3, 4))
-type m = Matrix(3, 4, Integer)
-```
 
 ### Recursion
 

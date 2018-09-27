@@ -31,8 +31,9 @@ type PrimOpName = IdentifierName
 
 data Type = UnresolvedType
           | Type TypeName
-          | SizedType TypeName Integer Type
-          | NestedType TypeName [Type] deriving (Eq, Show)
+          | DataType Primitive
+          | NestedType TypeName [Type]
+          | VariableType IdentifierName deriving (Eq, Show)
 
 type Context = Map.Map IdentifierName Type
 mkContext :: [(IdentifierName, Type)] -> Context
@@ -90,8 +91,8 @@ a <- Expression
 -}
 data Assignment = PrimAssign IdentifierName Primitive
                 | ExprAssign IdentifierName Expression
+                | TypeAssign Type Type
                  deriving (Eq, Show)
-
 
 type Indentation = Integer
 data Line = Line Indentation Assignment deriving (Eq, Show)

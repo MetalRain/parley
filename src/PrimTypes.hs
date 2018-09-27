@@ -7,6 +7,7 @@ module PrimTypes
 
 import Types
   ( Type(..)
+  , Primitive(..)
   )
 
 
@@ -17,7 +18,7 @@ scalar :: Type
 scalar = Type "Scalar"
 
 vector :: Integer -> Type -> Type
-vector n t = SizedType "Vector" n t
+vector n t = NestedType "Vector" [DataType (PrimInt n), t]
 
 function :: [Type] -> Type
 function args = NestedType "Function" args

@@ -3,6 +3,7 @@
 module Parser
     ( identifierNameParser
     , typeNameParser
+    , typeParser
     , identifierParser
     , integerParser
     , scalarParser
@@ -65,12 +66,41 @@ typeNameParser = do
   rest  <- many (alphaNum)
   return $ (start:rest)
 
+simpleTypeParser :: ParserOf st Type
+simpleTypeParser = do
+  name <- trailingSpace typeNameParser
+  return $ Type name
+
+dataTypeParser :: ParserOf st Type
+dataTypeParser = do
+  prim <- primitiveParser
+  return $ DataType prim
+
+nestedTypeParser :: ParserOf st Type
+nestedTypeParser = do
+  name     <- typeNameParser
+  _        <- string "("
+  subTypes <- (trailingSpace typeParser) `sepBy` (trailingSpace (string ","))
+  _        <- trailingSpace (string ")")
+  return $ NestedType name subTypes
+
+variableTypeParser :: ParserOf st Type
+variableTypeParser = do
+  name <- trailingSpace (identifierNameParser)
+  return $ VariableType name
+
+typeParser :: ParserOf st Type
+typeParser = (try nestedTypeParser)
+           <|> (try dataTypeParser)
+           <|> (try variableTypeParser)
+           <|> simpleTypeParser
+
 identifierParser :: ParserOf st Identifier
 identifierParser = do
   idName   <- trailingSpace identifierNameParser
   _        <- trailingSpace (string ":")
-  typeName <- trailingSpace typeNameParser
-  return $ Identifier idName (Type typeName)
+  idType   <- typeParser
+  return $ Identifier idName idType
 
 negIntegerParser :: ParserOf st TInteger
 negIntegerParser = do
@@ -167,23 +197,32 @@ expressionParser :: ParserOf st Expression
 expressionParser = (try prefixExpressionParser) <|> infixExpressionParser
 
 
-primAssignParser :: String -> ParserOf st Assignment
-primAssignParser ident = do
+primAssignParser :: ParserOf st Assignment
+primAssignParser = do
+  ident <- trailingSpace identifierNameParser
   _     <- trailingSpace (string "=")
   prim  <- trailingSpace primitiveParser
   return $ PrimAssign ident prim
 
-primExprParser :: String -> ParserOf st Assignment
-primExprParser ident = do
+exprAssignParser :: ParserOf st Assignment
+exprAssignParser = do
+  ident <- trailingSpace identifierNameParser
   _     <- trailingSpace (string "<-")
   expr  <- trailingSpace expressionParser
   return $ ExprAssign ident expr
 
+typeAssignParser :: ParserOf st Assignment
+typeAssignParser = do
+  _       <- trailingSpace (string "alias")
+  alias   <- typeParser
+  _       <- trailingSpace (string "=")
+  aliased <- typeParser
+  return $ TypeAssign alias aliased
+
 assignmentParser :: ParserOf st Assignment
-assignmentParser = do
-  ident <- trailingSpace identifierNameParser
-  a     <- (try $ primAssignParser ident) <|> (primExprParser ident)
-  return a
+assignmentParser = (try typeAssignParser)
+                 <|> (try primAssignParser)
+                 <|> exprAssignParser
 
 lineParser :: ParserOf st Line
 lineParser = do
