@@ -37,7 +37,7 @@ import Types
     , LineGroup(..)
     )
 
-import Text.Parsec.Char ( alphaNum, char, digit, endOfLine, lower, oneOf, spaces, string, upper )
+import Text.Parsec.Char ( alphaNum, anyChar, char, digit, endOfLine, lower, newline, noneOf, oneOf, spaces, string, upper )
 import Text.Parsec.Prim ( Parsec(..), (<|>), many, parse, try )
 import Text.Parsec.Combinator ( eof, lookAhead, many1, manyTill, notFollowedBy, option, parserTrace, parserTraced, sepBy, sepBy1 )
 
@@ -224,11 +224,28 @@ assignmentParser = (try typeAssignParser)
                  <|> (try primAssignParser)
                  <|> exprAssignParser
 
-lineParser :: ParserOf st Line
-lineParser = do
+assignmentLineParser :: ParserOf st Line
+assignmentLineParser = do
   indent     <- many (char ' ')
   assignment <- trailingSpace assignmentParser
   return $ Line (toInteger $ length indent) assignment
+
+commentLineParser :: ParserOf st Line
+commentLineParser = do
+  indent  <- many (char ' ')
+  _       <- string "#"
+  comment <- many (noneOf "\n")
+  return $ CommentLine (toInteger $ length indent) comment
+
+emptyLineParser :: ParserOf st Line
+emptyLineParser = do
+  _  <- many (noneOf "\n")
+  return $ CommentLine 0 ""
+
+lineParser :: ParserOf st Line
+lineParser = (try commentLineParser)
+           <|> (try assignmentLineParser)
+           <|> emptyLineParser
 
 linesParser :: ParserOf st [Line]
 linesParser = do
@@ -247,13 +264,19 @@ buildLineGroup current@(LineGroup level a children) tail@(next@(Line nextLevel b
   | level == nextLevel = ( current : buildLineGroup (LineGroup nextLevel b []) rest)
   -- next is child of current, take rest until it's not leaf anymore
   | level < nextLevel = [LineGroup level a $ children ++ (buildLineGroup (LineGroup nextLevel b []) (takeWhile (isLeafer level) rest))]
+-- comments are left out
+buildLineGroup current@(LineGroup level a children) tail@(next@(CommentLine nextLevel b):rest) = buildLineGroup current rest
 -- no more lines, current is leaf
-buildLineGroup current [] = [ current ]
+buildLineGroup current@(LineGroup _ _ _) [] = [ current ]
+
+notCommentLine :: Line -> Bool
+notCommentLine (Line _ _) = True
+notCommentLine (CommentLine _ _ ) = False
 
 lineGroupParser :: ParserOf st [LineGroup]
 lineGroupParser = do
   lines <- linesParser
-  let ((Line level a):rest) = lines
+  let ((Line level a):rest) = filter notCommentLine lines
   return $ buildLineGroup (LineGroup level a []) rest
 
 programHeader :: [LineGroup] -> LineGroup

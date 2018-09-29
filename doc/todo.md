@@ -4,7 +4,6 @@ Must have:
 - Identifier matching, scopes, closures
 - Typechecking
 - Conditional execution (if else)
-- Comments
 - Loop controls (for, recursion, pattern matching)
 - Interpreter
 

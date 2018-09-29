@@ -300,6 +300,23 @@ spec = do
             , Line 0 (ExprAssign "res" (Expression "map" [ ArgIdent "square", ArgIdent "v" ]))
             ])
 
+    it "accepts comment lines" $ do
+      let program = "# values\n\
+                    \v = (1, 2, 3)"
+      testParser linesParser program `shouldBe` (Right 
+            [ CommentLine 0 " values"
+            , Line 0 (PrimAssign "v" (PrimVector (TVector 3 [ PrimInt 1, PrimInt 2, PrimInt 3 ])))
+            ])
+
+    it "accepts empty lines" $ do
+      let program = "  \n\
+                    \v = (1, 2, 3)"
+      testParser linesParser program `shouldBe` (Right 
+            [ CommentLine 0 ""
+            , Line 0 (PrimAssign "v" (PrimVector (TVector 3 [ PrimInt 1, PrimInt 2, PrimInt 3 ])))
+            ])
+
+
   describe "lineGroupParser" $ do
     it "builds linegroup tree" $ do
       let program = "main = a: T -> id d\n\

@@ -1,4 +1,7 @@
+# rename of same function
 myplus = x: Integer y: Integer -> plus x y
+
 main = stdin: stream -> myplus a b
+  # Need to get a and b first
   a <- get stdin 0
   b <- get stdin 1

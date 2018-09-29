@@ -139,7 +139,9 @@ instance Show Assignment where
   show (TypeAssign alias t) = withSpaces ["alias", showKeyValue (show alias, t)]
 
 type Indentation = Integer
-data Line = Line Indentation Assignment deriving (Eq, Show)
+data Line = Line Indentation Assignment
+          | CommentLine Indentation String
+           deriving (Eq, Show)
 data LineGroup = LineGroup Indentation Assignment [LineGroup] deriving (Eq)
 instance Show LineGroup where
   show (LineGroup i a lgs) = withRows [(indent (fromIntegral i) (show a)), (intercalate "" (showMany lgs))]
