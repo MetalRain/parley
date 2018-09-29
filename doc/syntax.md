@@ -53,12 +53,12 @@ y <- idx v 3
 
 ### Function
 
-Functions return single value using inputs and previously assigned identifiers.
+Functions return single value using primitives and identifiers in scope.
 ```
 f = a: Integer -> plus a 1
 ```
 
-## Expresions
+## Expressions
 
 All expressions are function evaluations that assign value to identifier.
 ```
@@ -163,6 +163,8 @@ mulplus = x: Integer y: Integer -> mulplus x1 y
 ```
 
 ## Future ideas
+
+This section contains half baked ideas for unsolved problems.
 
 ### Vector destructuring
 

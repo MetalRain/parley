@@ -26,7 +26,11 @@ import PrimTypes
   )
 
 primOps :: [Expression]
-primOps = [ id, plus, minus, mul, join, idx, get ]
+primOps = [ id
+          , plus, minus, mul
+          , splus, sminus, smul, sdiv
+          , join, idx, get
+          ]
 
 -- Common ops
 id :: Expression
@@ -41,6 +45,19 @@ minus = NativeExpression "minus" [integer, integer] integer
 
 mul :: Expression
 mul = NativeExpression "mul" [integer, integer] integer
+
+-- Scalar ops
+splus :: Expression
+splus = NativeExpression "splus" [scalar, scalar] scalar
+
+sminus :: Expression
+sminus = NativeExpression "sminus" [scalar, scalar] scalar
+
+smul :: Expression
+smul = NativeExpression "smul" [scalar, scalar] scalar
+
+sdiv :: Expression
+sdiv = NativeExpression "sdiv" [scalar, scalar] scalar
 
 -- Vector ops
 join :: Expression

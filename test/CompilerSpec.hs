@@ -18,9 +18,9 @@ spec = do
       wasSuccessful result `shouldBe` True
 
     it "can compile vec-len" $ do
-      result <- testCompile "examples/fib.par"
+      result <- testCompile "examples/vec-len.par"
       wasSuccessful result `shouldBe` True
 
     it "can compile plus" $ do
-      result <- testCompile "examples/fib.par"
+      result <- testCompile "examples/plus.par"
       wasSuccessful result `shouldBe` True
