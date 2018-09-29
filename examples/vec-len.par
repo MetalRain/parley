@@ -1,0 +1,4 @@
+main = stdin: stream -> id result
+  length = v: Vector(n, t) -> id 3
+  result <- length values
+  values = (1, 2, 3)

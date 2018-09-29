@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
-
 module Types
     ( TypeName
     , IdentifierName
@@ -24,7 +22,7 @@ module Types
     ) where
 
 import Prelude hiding (showList)
-import Data.List ( intersperse, intercalate )
+import Data.List ( foldl', intercalate )
 import Data.Ratio ( (%) )
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -96,7 +94,7 @@ data Primitive = PrimInt TInteger
 instance Show Primitive where
   show (PrimInt i) = show i
   show (PrimScalar s) = show s
-  show (PrimVector (TVector i p)) = "Vector(" ++ (withCommas [show i, show p]) ++ ")"
+  show (PrimVector (TVector i p)) = "(" ++ (withCommas $ showMany p) ++ ")"
   show (PrimFunc (TFunction args expr)) = withSpaces (showMany args) ++ " -> " ++ show expr
 
 data Argument = ArgIdent IdentifierName
@@ -153,7 +151,7 @@ argumentIdentifierNames (ArgIdent n) = [n]
 argumentIdentifierNames (ArgPrim _) = []
 
 identifiersInExpression :: Expression -> [IdentifierName]
-identifiersInExpression (Expression n args) = foldl (++) [n] (map argumentIdentifierNames args)
+identifiersInExpression (Expression n args) = foldl' (++) [n] (map argumentIdentifierNames args)
 identifiersInExpression (NativeExpression n _ _) = [n]
 
 identifierName :: Identifier -> IdentifierName

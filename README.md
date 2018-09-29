@@ -42,16 +42,17 @@ Build with
 $ stack build
 ```
 
-Run with
-
+Parse parley file with
 ```
-$ stack exec parley-exe
+$ stack exec parley-exe ./examples/fib.par
 ```
 
 Currently program parses one example and outputs:
 - code itself
 - pretty printed parse tree
 - pretty printed abstract syntax tree with type information for that scope
+
+Example output:
 ```
 Parsing file: ./examples/fib.par
 Program code:

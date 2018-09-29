@@ -10,9 +10,12 @@ import PrimTypes ( integer )
 import Transform ( fromAST )
 import System.IO.Error (userError)
 import PrettyShow ( indentRows )
+import System.Environment
 
 main :: IO ()
-main = compile "./examples/fib.par"
+main = do
+  args <- getArgs
+  compile (head args)
 
 compile :: FilePath -> IO ()
 compile f = do
