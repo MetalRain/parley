@@ -1,0 +1,8 @@
+main = stdin: Integer -> fib stdin
+  fib = n: 1 -> id 0
+  fib = n: 2 -> id 1
+  fib = n: Integer -> plus f1 f2
+    n1 <- minus n 1
+    n2 <- minus n 2
+    f1 <- fib n1
+    f2 <- fib n2

@@ -12,6 +12,7 @@ module AST
     , mkPrimOpsContext
     ) where
 
+import Prelude hiding (showList)
 import Data.Either
 import Data.Maybe
 import Data.List ( intercalate )
@@ -38,20 +39,42 @@ import PrimTypes
   , vector
   , function
   )
+import PrettyShow
+  ( showMany
+  , withCommas
+  , withRows
+  , indent
+  , indentRows
+  )
+
+-- Type errors
 
 type Message = String
-data TypeError = TypeError [Assignment] Expression Message deriving (Eq)
+data TypeError = TypeError Context [Assignment] Expression Message deriving (Eq)
 instance Show TypeError where
-  show (TypeError as e m) = "Type error:" ++ m ++ "\n  in expression: " ++ (show e) ++ "\n  stack:\n    " ++ (intercalate "\n    " $ (map show as))
+  show (TypeError c as e m) = withRows [ "Type error:"
+                                       , indent 4 m
+                                       , indent 2 "expression:"
+                                       , indent 4 (show e)
+                                       , indent 2 "stack:"
+                                       , indentRows 4 (withRows $ showMany as)
+                                       , indent 2 "context:"
+                                       , indentRows 4 (show c)
+                                       ]
 
 type Typing = Either TypeError Type
 
 
 notDefined :: Context -> Expression -> IdentifierName -> TypeError
-notDefined c e n = TypeError [] e $ (show n) ++ " not found in context " ++ (show c)
+notDefined c e n = TypeError c [] e $ (show n) ++ " not defined"
 
 typeMismatchError :: Context -> Expression -> [Type] -> [Type] -> TypeError
-typeMismatchError c e xs ys = TypeError [] e $ (show xs) ++ " don't match with " ++ (show ys) ++ " in context: \n" ++ (show c)
+typeMismatchError c e xs ys = TypeError c [] e $ (withCommas $ showMany xs) ++ " don't match with " ++ (withCommas $ showMany ys)
+
+enhanceErrorTrace :: TypeError -> Assignment -> TypeError
+enhanceErrorTrace (TypeError c as e m) a = TypeError c (a : as) e m
+
+-- Type resolving
 
 identType :: Identifier -> Type
 identType (Identifier _ t) = t
@@ -72,16 +95,18 @@ primType c (PrimFunc (TFunction args e)) = (either
   (\t -> Right $ function $ (map identType args) ++ [t])
   (exprType c e))
 
-typeType :: Type -> Type
+typeType :: Context -> Type -> Typing
  -- Function is nested type where return type is last type
-typeType (NestedType "Function" ts) = last ts
-typeType t = t
+typeType _ (NestedType "Function" ts) = Right $ last ts
+typeType c t@(VariableType n) = Right $ fromMaybe t $ contextLookup c n
+typeType c t@(DataType p) = primType c p
+typeType _ t = Right t
 
 exprType :: Context -> Expression -> Typing
 exprType c (NativeExpression _ _ out) = Right out
 exprType c e@(Expression n args) = res where
   -- check that function & args have types
-  res = if (length errors) == 0 then Right $ typeType fnType
+  res = if (length errors) == 0 then typeType c fnType
                                 else Left $ head errors
   errors = lefts $ (fnTypeE : argTypesE) ++ mismatchErrors
   fnTypeE = identNameType c e n
@@ -118,6 +143,22 @@ argType :: Context -> Expression -> Argument -> Typing
 argType c e (ArgIdent n) = identNameType c e n
 argType c e (ArgPrim p) = primType c p
 
+resolveTypes :: Context -> LineGroup -> Either TypeError AST
+resolveTypes c lg@(LineGroup _ a lgs) = 
+  (either
+  (\e -> Left $ enhanceErrorTrace e a)
+  (\newC -> resolveChildTypes newC a lgs)
+  (resolveChildContext c a lgs))
+
+resolveChildTypes :: Context -> Assignment -> [LineGroup] -> Either TypeError AST
+resolveChildTypes c a lgs = res where
+  children = map (\lg -> resolveTypes c lg) lgs
+  childErrors = lefts children
+  res = if ((length childErrors) == 0) then Right $ AST a c (rights children)
+                                       else Left $ enhanceErrorTrace (head childErrors) a
+
+-- Context handling
+
 contextLookup :: Context -> IdentifierName -> Maybe Type
 contextLookup (Context m) n = Map.lookup n m
 
@@ -143,25 +184,15 @@ mkPrimOpsContext :: [Expression] -> Context
 mkPrimOpsContext primOps = Context $ Map.fromList pairs where
   pairs = map (\op@(NativeExpression name inT outT ) -> (name, function (inT ++ [outT]))) primOps
 
-resolveTypes :: Context -> LineGroup -> Either TypeError AST
-resolveTypes c lg@(LineGroup _ a lgs) = 
-  (either
-  (\e -> Left $ enhanceErrorTrace e a)
-  (\newC -> resolveChildTypes newC a lgs)
-  (resolveChildContext c a lgs))
-
-resolveChildTypes :: Context -> Assignment -> [LineGroup] -> Either TypeError AST
-resolveChildTypes c a lgs = res where
-  children = map (\lg -> resolveTypes c lg) lgs
-  childErrors = lefts children
-  res = if ((length childErrors) == 0) then Right $ AST a c (rights children)
-                                       else Left $ enhanceErrorTrace (head childErrors) a
+assignmentStubContext :: Assignment -> (IdentifierName, Type)
+assignmentStubContext a = (ident, UnresolvedType) where
+  ident = assignmentIdentifierName a
 
 resolveChildContext :: Context -> Assignment -> [LineGroup] -> Either TypeError Context
 resolveChildContext c a lgs = res where
-  childTypeStubs = map (\(LineGroup _ a _) -> (assignmentIdentifierName a, UnresolvedType)) lgs
+  childTypeStubs = map (\(LineGroup _ a _) -> assignmentStubContext a) lgs
   ident = assignmentIdentifierName a
-  newContext = fillContext c $ mkContext $ [(ident, UnresolvedType)] ++ childTypeStubs ++ (functionArgumentTypeStubs a)
+  newContext = fillContext c $ mkContext $ [assignmentStubContext a] ++ childTypeStubs ++ (functionArgumentTypeStubs a)
   -- Resolve assignment type when child identifiers are stubbed
   res = (either
     (\e -> Left e)
@@ -176,6 +207,3 @@ functionArgumentTypeStubs _ = []
 assignmentIdentifierName :: Assignment -> IdentifierName
 assignmentIdentifierName (ExprAssign i _) = i
 assignmentIdentifierName (PrimAssign i _) = i
-
-enhanceErrorTrace :: TypeError -> Assignment -> TypeError
-enhanceErrorTrace (TypeError as e m) a = TypeError (a : as) e m

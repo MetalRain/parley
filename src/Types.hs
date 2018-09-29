@@ -23,12 +23,18 @@ module Types
     , mkContext
     ) where
 
+import Prelude hiding (showList)
 import Data.List ( intersperse, intercalate )
 import Data.Ratio ( (%) )
 import qualified Data.Map.Strict as Map
-
-withSpaces :: [String] -> String
-withSpaces = intercalate " "
+import PrettyShow
+  ( showMany
+  , withCommas
+  , withRows
+  , withSpaces
+  , showKeyValue
+  , indent
+  )
 
 type TypeName = String
 type IdentifierName = String
@@ -44,7 +50,7 @@ instance Show Type where
   show (UnresolvedType) = "???"
   show (Type name) = name
   show (DataType prim) = show prim
-  show (NestedType name types) = name ++ "(" ++ (intercalate ", " $ (map show types)) ++ ")"
+  show (NestedType name types) = name ++ "(" ++ (withCommas $ showMany types) ++ ")"
   show (VariableType name) = name
 
 data Context = Context (Map.Map IdentifierName Type) deriving (Eq)
@@ -52,7 +58,7 @@ mkContext :: [(IdentifierName, Type)] -> Context
 mkContext xs = Context $ Map.fromList xs
 
 instance Show Context where
-  show (Context m) = intercalate "\n" (map (\(name, t) -> withSpaces [name, "=", show t]) $ Map.toList m)
+  show (Context m) = withRows (map showKeyValue $ Map.toList m)
 
 -- Primary types
 type TInteger = Integer
@@ -62,7 +68,7 @@ mkScalar a b  = (fromIntegral a) % (fromIntegral b)
 
 data TVector = TVector TInteger [Primitive] deriving (Eq)
 instance Show TVector where
-  show (TVector i prims) = "(" ++ (intercalate ", " $ map show prims) ++ ")"
+  show (TVector i prims) = "(" ++ (withCommas $ showMany prims) ++ ")"
 
 data Identifier = Identifier IdentifierName Type deriving (Eq)
 instance Show Identifier where
@@ -76,7 +82,7 @@ IdentifierName = a: T b: T -> Expression
 -}
 data TFunction = TFunction [Source] Expression deriving (Eq)
 instance Show TFunction where
-  show (TFunction args expr) = withSpaces (map show args) ++ " -> " ++ (show expr)
+  show (TFunction args expr) = withSpaces (showMany args) ++ " -> " ++ show expr
 
 
 data Primitive = PrimInt TInteger
@@ -87,8 +93,8 @@ data Primitive = PrimInt TInteger
 instance Show Primitive where
   show (PrimInt i) = show i
   show (PrimScalar s) = show s
-  show (PrimVector (TVector i p)) = "Vector(" ++ (show i) ++ ", " ++ (show p) ++ ")"
-  show (PrimFunc (TFunction args expr)) = withSpaces (map show args) ++ " -> " ++ show expr
+  show (PrimVector (TVector i p)) = "Vector(" ++ (withCommas [show i, show p]) ++ ")"
+  show (PrimFunc (TFunction args expr)) = withSpaces (showMany args) ++ " -> " ++ show expr
 
 data Argument = ArgIdent IdentifierName
               | ArgPrim Primitive
@@ -108,8 +114,8 @@ data Expression = Expression FunctionName [Argument]
                 | NativeExpression PrimOpName [Type] Type
                  deriving (Eq)
 instance Show Expression where
-  show (Expression name args) = withSpaces (name : (map show args))
-  show (NativeExpression name inputTypes outType) = withSpaces $ [name] <> (map show inputTypes) <> [" -> ", show outType]
+  show (Expression name args) = withSpaces (name : (showMany args))
+  show (NativeExpression name inputTypes outType) = withSpaces $ [name] <> (showMany inputTypes) <> [" -> ", show outType]
 
 
 {-
@@ -127,13 +133,13 @@ data Assignment = PrimAssign IdentifierName Primitive
                 | TypeAssign Type Type
                  deriving (Eq)
 instance Show Assignment where
-  show (PrimAssign name prim) = withSpaces [name, "=", show prim]
+  show (PrimAssign name prim) = showKeyValue (name, prim)
   show (ExprAssign name expr) = withSpaces [name, "<-", show expr]
-  show (TypeAssign alias t) = withSpaces ["alias", show alias, "=", show t]
+  show (TypeAssign alias t) = withSpaces ["alias", showKeyValue (show alias, t)]
 
 type Indentation = Integer
 data Line = Line Indentation Assignment deriving (Eq, Show)
 data LineGroup = LineGroup Indentation Assignment [LineGroup] deriving (Eq)
 instance Show LineGroup where
-  show (LineGroup i a lgs) = (replicate (fromIntegral i) ' ') ++ (show a) ++ "\n" ++ (intercalate "" (map show lgs))
+  show (LineGroup i a lgs) = withRows [(indent (fromIntegral i) (show a)), (intercalate "" (showMany lgs))]
 data AST = AST Assignment Context [AST] deriving (Eq, Show)
