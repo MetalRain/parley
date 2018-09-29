@@ -62,5 +62,5 @@ spec = do
       let e = (Expression "f" [ ArgIdent "b"])
       let a = (ExprAssign "a" e)
       let lg = (LineGroup 0 a [])
-      let expected = enhanceErrorTrace (typeMismatchError (inheritContext ctx $ mkContext [("a", UnresolvedType)]) e [integer] [scalar]) a
+      let expected = enhanceErrorTrace (typeMismatchError "type" (inheritContext ctx $ mkContext [("a", UnresolvedType)]) e [integer] [scalar]) a
       resolveTypes ctx lg `shouldBe` (Left expected)

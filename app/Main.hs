@@ -11,7 +11,7 @@ import Transform ( fromAST )
 import System.IO.Error (userError)
 
 main :: IO ()
-main = compile "./examples/fib.par"
+main = compile "./examples/plus.par"
 
 compile :: FilePath -> IO ()
 compile f = do

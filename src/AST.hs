@@ -42,6 +42,7 @@ import PrimTypes
 import PrettyShow
   ( showMany
   , withCommas
+  , withSpaces
   , withRows
   , indent
   , indentRows
@@ -68,8 +69,13 @@ type Typing = Either TypeError Type
 notDefined :: Context -> Expression -> IdentifierName -> TypeError
 notDefined c e n = TypeError c [] e $ (show n) ++ " not defined"
 
-typeMismatchError :: Context -> Expression -> [Type] -> [Type] -> TypeError
-typeMismatchError c e xs ys = TypeError c [] e $ (withCommas $ showMany xs) ++ " don't match with " ++ (withCommas $ showMany ys)
+typeMismatchError :: String -> Context -> Expression -> [Type] -> [Type] -> TypeError
+typeMismatchError m c e xs ys = TypeError c [] e $ withSpaces [ withCommas $ showMany xs
+                                                              , "don't match with"
+                                                              , withCommas $ showMany ys
+                                                              , "in"
+                                                              , m
+                                                              ]
 
 enhanceErrorTrace :: TypeError -> Assignment -> TypeError
 enhanceErrorTrace (TypeError c as e m) a = TypeError c (a : as) e m
@@ -102,13 +108,17 @@ typeType c t@(VariableType n) = Right $ fromMaybe t $ contextLookup c n
 typeType c t@(DataType p) = primType c p
 typeType _ t = Right t
 
+
+mkResType :: IdentifierName -> Type
+mkResType n = VariableType (n ++ "Result")
+
 exprType :: Context -> Expression -> Typing
 exprType c (NativeExpression _ _ out) = Right out
 exprType c e@(Expression n args) = res where
   -- check that function & args have types
   res = if (length errors) == 0 then typeType c fnType
-                                else Left $ head errors
-  errors = lefts $ (fnTypeE : argTypesE) ++ mismatchErrors
+                                else Left $ head errors
+  errors = lefts $ [fnTypeE] ++ argTypesE ++ mismatchErrors
   fnTypeE = identNameType c e n
   fnType = (fromRight UnresolvedType fnTypeE)
   argTypesE = map (\a -> argType c e a) args
@@ -116,11 +126,12 @@ exprType c e@(Expression n args) = res where
   -- check that types match
   mismatchErrors = case fnType of
     (NestedType "Function" fnArgTypes) -> (matchManyTypes c e) (take (length argTypes) fnArgTypes) argTypes
-    _                                  -> [ Left $ typeMismatchError c e [NestedType "Function" argTypes] [fnType] ]
+    UnresolvedType                     -> []
+    _                                  -> [ Left $ typeMismatchError "expression" c e [NestedType "Function" argTypes] [fnType] ]
 
 matchManyTypes :: Context -> Expression -> [Type] -> [Type] -> [Typing]
 matchManyTypes c e xs ys = res where
-  res = if (length xs) /= (length ys) then [ Left $ typeMismatchError c e xs ys ]
+  res = if (length xs) /= (length ys) then [ Left $ typeMismatchError "function arguments" c e xs ys ]
                                       else zipWith (matchTypes c e) xs ys
 
 matchTypes :: Context -> Expression -> Type -> Type -> Typing
@@ -128,16 +139,18 @@ matchTypes c e nt@(NestedType n ns) mt@(NestedType m ms) = res where
   -- match names & subtypes of nested types
   res = if n == m then (if length errors > 0 then Left $ head errors
                                              else Right nt)
-                  else Left $ typeMismatchError c e [NestedType n []] [NestedType m []]
+                  else Left $ typeMismatchError "function name" c e [NestedType n []] [NestedType m []]
   errors = lefts matchesE
   matchesE = matchManyTypes c e ns ms
--- Variable types can bind to anything
--- TODO: only bind once
+-- Variable types can bind to anything, but prefer variable over unresolved
 matchTypes _ _ (VariableType _) t = Right t
 matchTypes _ _ t (VariableType _) = Right t
+-- Unresolved types can be anything 
+matchTypes _ _ t UnresolvedType = Right t
+matchTypes _ _ UnresolvedType t = Right t
 -- Strict comparison, must be same type
 matchTypes c e expected actual = if expected == actual then Right expected
-                                                       else Left $ typeMismatchError c e [expected] [actual]
+                                                       else Left $ typeMismatchError "type" c e [expected] [actual]
 
 argType :: Context -> Expression -> Argument -> Typing
 argType c e (ArgIdent n) = identNameType c e n
@@ -185,8 +198,8 @@ mkPrimOpsContext primOps = Context $ Map.fromList pairs where
   pairs = map (\op@(NativeExpression name inT outT ) -> (name, function (inT ++ [outT]))) primOps
 
 assignmentStubContext :: Assignment -> (IdentifierName, Type)
-assignmentStubContext a = (ident, UnresolvedType) where
-  ident = assignmentIdentifierName a
+assignmentStubContext (PrimAssign ident p) = (ident, UnresolvedType)
+assignmentStubContext (ExprAssign ident e) = (ident, UnresolvedType)
 
 resolveChildContext :: Context -> Assignment -> [LineGroup] -> Either TypeError Context
 resolveChildContext c a lgs = res where

@@ -1,3 +1,4 @@
-main = stdin: stream -> plus a b
+myplus = x: Integer y: Integer -> plus x y
+main = stdin: stream -> myplus a b
   a <- get stdin 0
   b <- get stdin 1

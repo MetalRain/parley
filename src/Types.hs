@@ -27,6 +27,7 @@ import Prelude hiding (showList)
 import Data.List ( intersperse, intercalate )
 import Data.Ratio ( (%) )
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import PrettyShow
   ( showMany
   , withCommas
@@ -34,6 +35,7 @@ import PrettyShow
   , withSpaces
   , showKeyValue
   , indent
+  , indentRows
   )
 
 type TypeName = String
@@ -142,4 +144,30 @@ data Line = Line Indentation Assignment deriving (Eq, Show)
 data LineGroup = LineGroup Indentation Assignment [LineGroup] deriving (Eq)
 instance Show LineGroup where
   show (LineGroup i a lgs) = withRows [(indent (fromIntegral i) (show a)), (intercalate "" (showMany lgs))]
-data AST = AST Assignment Context [AST] deriving (Eq, Show)
+data AST = AST Assignment Context [AST] deriving (Eq)
+
+
+argumentIdentifierNames :: Argument -> [IdentifierName]
+argumentIdentifierNames (ArgIdent n) = [n]
+argumentIdentifierNames (ArgPrim _) = []
+
+identifiersInExpression :: Expression -> [IdentifierName]
+identifiersInExpression (Expression n args) = foldl (++) [n] (map argumentIdentifierNames args)
+identifiersInExpression (NativeExpression n _ _) = [n]
+
+identifierName :: Identifier -> IdentifierName
+identifierName (Identifier n _) = n
+
+identifiersInFunction :: TFunction -> [IdentifierName]
+identifiersInFunction (TFunction args expr) = (map identifierName args) ++ identifiersInExpression expr
+
+identifiersInAssignment :: Assignment -> [IdentifierName]
+identifiersInAssignment (PrimAssign n (PrimFunc f)) = [n] ++ identifiersInFunction f
+identifiersInAssignment (PrimAssign n _) = [n]
+identifiersInAssignment (ExprAssign n e) = (n : identifiersInExpression e)
+
+reducedContext :: Context -> Assignment -> Context
+reducedContext (Context m) a = Context $ Map.restrictKeys m $ Set.fromList $ identifiersInAssignment a
+
+instance Show AST where
+  show (AST a c as) = indentRows 2 $ withRows (show a : (indentRows 2 $ show $ reducedContext c a) : showMany as)
