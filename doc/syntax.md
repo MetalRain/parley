@@ -70,11 +70,11 @@ stdout <- print 1
 ## Type system
 
 Types can be either:
-- [Primitive types](#Primitive%20types)
-- [Data types](#Data%20types)
-- [Nested types](#Nested%20types)
-- [Type variables](#Type%20variables)
-- [Type aliases](#Type%20aliases)
+- Primitive types
+- Data types
+- Nested types
+- Type variables
+- Type aliases
 
 ### Data types
 

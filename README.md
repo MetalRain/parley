@@ -79,29 +79,29 @@ main = stdin: Integer -> fib stdin
 
 AST error: 
 AST:
-  stdout <- main stdin
-    # main: Function(stream, stream)
-    # stdin: stream
-    # stdout: stream
+Just   stdout <- main stdin
+    # main: Function(Integer, Integer)
+    # stdin: Integer
+    # stdout: Integer
   
     main = stdin: Integer -> fib stdin
-      # fib: ???
-      # main: Function(Integer, ???)
+      # fib: Function(Integer, Integer)
+      # main: Function(Integer, Integer)
       # stdin: Integer
     
       fib = n: 1 -> id 0
-        # fib: Function(1, t)
+        # fib: Function(1, Integer)
         # id: Function(t, t)
         # n: 1
     
       fib = n: 2 -> id 1
-        # fib: Function(2, t)
+        # fib: Function(2, Integer)
         # id: Function(t, t)
         # n: 2
     
       fib = n: Integer -> plus f1 f2
-        # f1: ???
-        # f2: ???
+        # f1: Integer
+        # f2: Integer
         # fib: Function(Integer, Integer)
         # n: Integer
         # plus: Function(Integer, Integer, Integer)
@@ -119,11 +119,10 @@ AST:
         f1 <- fib n1
           # f1: Integer
           # fib: Function(Integer, Integer)
-          # n1: ???
+          # n1: Integer
       
         f2 <- fib n2
           # f2: Integer
           # fib: Function(Integer, Integer)
-          # n2: ???
-
+          # n2: Integer
 ```
