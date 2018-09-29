@@ -54,9 +54,9 @@ Currently program parses one example and outputs:
 
 Example output:
 ```
-Parsing file: ./examples/fib.par
-Program code:
+Code:
 main = stdin: Integer -> fib stdin
+  
   fib = n: 1 -> id 0
   fib = n: 2 -> id 1
   fib = n: Integer -> plus f1 f2
@@ -64,8 +64,6 @@ main = stdin: Integer -> fib stdin
     n2 <- minus n 2
     f1 <- fib n1
     f2 <- fib n2
-
-Parse error: 
 Parse tree:
 stdout <- main stdin
 main = stdin: Integer -> fib stdin
@@ -77,10 +75,8 @@ main = stdin: Integer -> fib stdin
     f1 <- fib n1
     f2 <- fib n2
 
-
-AST error: 
 AST:
-Just   stdout <- main stdin
+  stdout <- main stdin
     # main: Function(Integer, Integer)
     # stdin: Integer
     # stdout: Integer
@@ -126,4 +122,5 @@ Just   stdout <- main stdin
           # f2: Integer
           # fib: Function(Integer, Integer)
           # n2: Integer
+
 ```
