@@ -1,4 +1,4 @@
-# Grammar
+# Syntax
 
 ## Identifiers
 
@@ -84,11 +84,11 @@ Data types can be used to:
 - create termination conditions to recursive functions.
 - create own vector like types, such as enums and records.
 ```
-fib n: Data(1) -> 0
-fib n: Data(2) -> 1
+fib n: 1 -> id 0
+fib n: 2 -> id 1
 fib n: Integer -> plus f1 f2
-  n1 <- sub n 1
-  n2 <- sub n 2
+  n1 <- minus n 1
+  n2 <- minus n 2
   f1 <- fib n1
   f2 <- fib n2
 ```
@@ -99,23 +99,24 @@ Nested types give name to list of other types.
 
 Function is nested type, which defines argument types and output type.
 ```
-f = a: Integer b: Integer -> plus a b # f: Function(Integer, Integer, Integer)
+f = a: Integer b: Integer -> plus a b
+# f: Function(Integer, Integer, Integer)
 ```
 
 Vector is a nested type, which defines vector length and type of contents.
 ```
-v = (1, 2, 3) # v: Vector(3, Integer)
+v = (1, 2, 3)
+# v: Vector(3, Integer)
 ```
 
 ### Type variables
 
 When function doesn't care about type of argument, type variables can be used.
-Type variables are universal in context they are defined, while type identifiers
-are not in same namespace as value identifiers, it's better to avoid confusion and use
-non-overlapping names.
+Data type variables can be used in expressions as primitives
 
 ```
-concat = t: tt v: Vector(n, tt) -> join t v
+length = v: Vector(n, t) -> n
+# length: Function(Vector(n, t), Integer)
 ```
 
 ### Type aliases
@@ -150,17 +151,16 @@ d <- h b a
 b <- f a
 ```
 
-## Future ideas
-
-
-
 ### Recursion
 
+Functions can be recursive
 ```
-# Recursion is fine
-g = f: Function x: T -> h x
-  h = y:  -> g f y
+mulplus = x: 0 y: Integer -> id y
+mulplus = x: Integer y: Integer -> mulplus x1 y
+  x1 <- minus x 1
 ```
+
+## Future ideas
 
 ### Vector destructuring
 
@@ -178,7 +178,6 @@ vv = (v.., v..)
 m = (v, v)
 # m = ((1, 2, 3), (1, 2, 3))
 ```
-
 
 ### Streams
 

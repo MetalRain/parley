@@ -1,14 +1,12 @@
 # Parley
 
-Functional language inspired by [Haskell](https://www.haskell.org/) and [LISP](https://en.wikipedia.org/wiki/Lisp_(programming_language)). Tries to make out of order (and parallel) execution more likely by giving less guarantees about order of execution.
+Functional language inspired by [Haskell](https://www.haskell.org/) and [LISP](https://en.wikipedia.org/wiki/Lisp_(programming_language)).
 
 Long term plan is to produce frontend to [LLVM](https://llvm.org/) but only when language semantics and syntax have been settled down.
 
 ## Status
 
-Language is still very much in progress, there is only incomplete parser and many things like iteration or conditionals are not though out or implemented.
-
-See [TODO](doc/todo.md) for more details.
+Language is still very much in progress, ee [TODO](doc/todo.md) for more details.
 
 ## Syntax
 
@@ -35,3 +33,93 @@ The coverage report for parley's test-suite "parley-test" is available at /home/
 ```
 Open coverage report with your browser.
 
+
+## Running
+
+Build with
+
+```
+$ stack build
+```
+
+Run with
+
+```
+$ stack exec parley-exe
+```
+
+Currently program parses one example and outputs parse results:
+```
+Parsing file: ./examples/fib.par
+Program code:
+main = stdin: Integer -> fib stdin
+  fib = n: 1 -> id 0
+  fib = n: 2 -> id 1
+  fib = n: Integer -> plus f1 f2
+    n1 <- minus n 1
+    n2 <- minus n 2
+    f1 <- fib n1
+    f2 <- fib n2
+
+Parse error: 
+Parse tree:
+stdout <- main stdin
+main = stdin: Integer -> fib stdin
+  fib = n: 1 -> id 0
+  fib = n: 2 -> id 1
+  fib = n: Integer -> plus f1 f2
+    n1 <- minus n 1
+    n2 <- minus n 2
+    f1 <- fib n1
+    f2 <- fib n2
+
+
+AST error: 
+AST:
+Just   stdout <- main stdin
+    main = Function(stream, stream)
+    stdin = stream
+    stdout = stream
+  
+    main = stdin: Integer -> fib stdin
+      fib = ???
+      main = Function(Integer, ???)
+      stdin = Integer
+    
+      fib = n: 1 -> id 0
+        fib = Function(1, t)
+        id = Function(t, t)
+        n = 1
+    
+      fib = n: 2 -> id 1
+        fib = Function(2, t)
+        id = Function(t, t)
+        n = 2
+    
+      fib = n: Integer -> plus f1 f2
+        f1 = ???
+        f2 = ???
+        fib = Function(Integer, Integer)
+        n = Integer
+        plus = Function(Integer, Integer, Integer)
+      
+        n1 <- minus n 1
+          minus = Function(Integer, Integer, Integer)
+          n = Integer
+          n1 = Integer
+      
+        n2 <- minus n 2
+          minus = Function(Integer, Integer, Integer)
+          n = Integer
+          n2 = Integer
+      
+        f1 <- fib n1
+          f1 = Integer
+          fib = Function(Integer, Integer)
+          n1 = ???
+      
+        f2 <- fib n2
+          f2 = Integer
+          fib = Function(Integer, Integer)
+          n2 = ???
+```

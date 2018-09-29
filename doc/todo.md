@@ -5,15 +5,10 @@ Must have:
 - Typechecking
 - Conditional execution (if else)
 - Comments
-- Type system
+- Loop controls (for, recursion, pattern matching)
 - Interpreter
 
 Good to have:
 - Primitive expressions
-- Type varibles / Generics
-- Loop controls (for, recursion, pattern matching
-
-Nice to have:
 - Irrational numbers
 - Streams (lazy evaluation, stream consuming)
-- Type aliases

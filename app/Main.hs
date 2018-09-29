@@ -9,9 +9,10 @@ import PrimOps ( primOps )
 import PrimTypes ( integer )
 import Transform ( fromAST )
 import System.IO.Error (userError)
+import PrettyShow ( indentRows )
 
 main :: IO ()
-main = compile "./examples/plus.par"
+main = compile "./examples/fib.par"
 
 compile :: FilePath -> IO ()
 compile f = do
@@ -19,9 +20,6 @@ compile f = do
   let ctx = inheritContext (mkPrimOpsContext primOps) (mkContext [ ("stdin", VariableType "stream")
                                                                  , ("main", NestedType "Function" [VariableType "stream", VariableType "stream"])
                                                                  ])
-  putStrLn "Default context:"
-  putStrLn $ show ctx
-  putStrLn ""
   code <- readFile f
   putStrLn "Program code:"
   putStrLn code
