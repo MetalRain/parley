@@ -34,6 +34,7 @@ import PrettyShow
   , withRows
   , withSpaces
   , showKeyValue
+  , showIdentType
   , indent
   , indentRows
   )
@@ -60,7 +61,7 @@ mkContext :: [(IdentifierName, Type)] -> Context
 mkContext xs = Context $ Map.fromList xs
 
 instance Show Context where
-  show (Context m) = withRows (map showKeyValue $ Map.toList m)
+  show (Context m) = withRows (map (\(k,v) -> "# " ++ showIdentType (k,v)) $ Map.toList m)
 
 -- Primary types
 type TInteger = Integer
@@ -74,7 +75,7 @@ instance Show TVector where
 
 data Identifier = Identifier IdentifierName Type deriving (Eq)
 instance Show Identifier where
-  show (Identifier name t) = name ++ ": " ++ show t
+  show (Identifier name t) = showIdentType (name, t)
 
 type Source = Identifier
 {-

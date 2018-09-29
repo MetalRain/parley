@@ -70,11 +70,11 @@ stdout <- print 1
 ## Type system
 
 Types can be either:
-- [Primitive types](#Primitive_types)
-- Data types
-- Nested types
-- Type variables
-- Type aliases
+- [Primitive types](#Primitive%20types)
+- [Data types](#Data%20types)
+- [Nested types](#Nested%20types)
+- [Type variables](#Type%20variables)
+- [Type aliases](#Type%20aliases)
 
 ### Data types
 
@@ -111,8 +111,8 @@ v = (1, 2, 3)
 
 ### Type variables
 
-When function doesn't care about type of argument, type variables can be used.
-Data type variables can be used in expressions as primitives
+If function doesn't care about type of argument, type variables can be used.
+When type variable is data type it can also be used in expressions as primitives
 
 ```
 length = v: Vector(n, t) -> n
@@ -124,6 +124,8 @@ length = v: Vector(n, t) -> n
 Types can be composed by giving them less verbose aliases.
 
 ```
+alias Vec3(t) = Vector(3, t)
+
 alias Matrix(n, m, t) = Vector(n, Vector(m, t))
 
 m = ((1, 2, 3, 4),

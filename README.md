@@ -6,7 +6,7 @@ Long term plan is to produce frontend to [LLVM](https://llvm.org/) but only when
 
 ## Status
 
-Language is still very much in progress, ee [TODO](doc/todo.md) for more details.
+Language is still very much in progress, see [TODO](doc/todo.md) for more details.
 
 ## Syntax
 
@@ -48,7 +48,10 @@ Run with
 $ stack exec parley-exe
 ```
 
-Currently program parses one example and outputs parse results:
+Currently program parses one example and outputs:
+- code itself
+- pretty printed parse tree
+- pretty printed abstract syntax tree with type information for that scope
 ```
 Parsing file: ./examples/fib.par
 Program code:
@@ -76,50 +79,51 @@ main = stdin: Integer -> fib stdin
 
 AST error: 
 AST:
-Just   stdout <- main stdin
-    main = Function(stream, stream)
-    stdin = stream
-    stdout = stream
+  stdout <- main stdin
+    # main: Function(stream, stream)
+    # stdin: stream
+    # stdout: stream
   
     main = stdin: Integer -> fib stdin
-      fib = ???
-      main = Function(Integer, ???)
-      stdin = Integer
+      # fib: ???
+      # main: Function(Integer, ???)
+      # stdin: Integer
     
       fib = n: 1 -> id 0
-        fib = Function(1, t)
-        id = Function(t, t)
-        n = 1
+        # fib: Function(1, t)
+        # id: Function(t, t)
+        # n: 1
     
       fib = n: 2 -> id 1
-        fib = Function(2, t)
-        id = Function(t, t)
-        n = 2
+        # fib: Function(2, t)
+        # id: Function(t, t)
+        # n: 2
     
       fib = n: Integer -> plus f1 f2
-        f1 = ???
-        f2 = ???
-        fib = Function(Integer, Integer)
-        n = Integer
-        plus = Function(Integer, Integer, Integer)
+        # f1: ???
+        # f2: ???
+        # fib: Function(Integer, Integer)
+        # n: Integer
+        # plus: Function(Integer, Integer, Integer)
       
         n1 <- minus n 1
-          minus = Function(Integer, Integer, Integer)
-          n = Integer
-          n1 = Integer
+          # minus: Function(Integer, Integer, Integer)
+          # n: Integer
+          # n1: Integer
       
         n2 <- minus n 2
-          minus = Function(Integer, Integer, Integer)
-          n = Integer
-          n2 = Integer
+          # minus: Function(Integer, Integer, Integer)
+          # n: Integer
+          # n2: Integer
       
         f1 <- fib n1
-          f1 = Integer
-          fib = Function(Integer, Integer)
-          n1 = ???
+          # f1: Integer
+          # fib: Function(Integer, Integer)
+          # n1: ???
       
         f2 <- fib n2
-          f2 = Integer
-          fib = Function(Integer, Integer)
-          n2 = ???
+          # f2: Integer
+          # fib: Function(Integer, Integer)
+          # n2: ???
+
 ```

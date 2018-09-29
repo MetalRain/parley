@@ -4,6 +4,7 @@ module PrettyShow
   , indentRows
   , showMany
   , showKeyValue
+  , showIdentType
   , withSpaces
   , withRows
   , withCommas
@@ -26,6 +27,9 @@ showMany xs = map show xs
 
 showKeyValue :: (Show a) => (String, a) -> String
 showKeyValue (k, v) = withSpaces [k, "=", show v]
+
+showIdentType :: (Show a) => (String, a) -> String
+showIdentType (k, v) = k ++ ": " ++ show v
 
 withSpaces :: [String] -> String
 withSpaces = intercalate " "
