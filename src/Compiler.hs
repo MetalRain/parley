@@ -1,9 +1,11 @@
 module Compiler
   ( compile
+  , wasSuccessful
+  , CompileResult(..)
   ) where
 
 import Data.Either (fromRight, fromLeft)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, isNothing, isJust)
 
 import Types ( Type(..), LineGroup(..), AST(..), Context, mkContext)
 import Parser ( programHeader, lineGroupParser, testParser )
@@ -21,8 +23,10 @@ defaultContext = inheritContext
              , ("main", NestedType "Function" [VariableType "stream", VariableType "stream"])
              ])
 
-compile :: String -> (Maybe LineGroup, Maybe ParseError, Maybe AST, Maybe TypeError)
-compile code = (parseTree, parseError, ast, typeError) where
+data CompileResult = CompileResult (Maybe LineGroup) (Maybe ParseError) (Maybe AST) (Maybe TypeError)
+
+compile :: String -> CompileResult
+compile code = CompileResult parseTree parseError ast typeError where
   parseTrees :: Either ParseError [LineGroup]
   parseTrees = testParser lineGroupParser code
 
@@ -40,3 +44,6 @@ compile code = (parseTree, parseError, ast, typeError) where
 
   ast :: Maybe AST
   ast = fromJust $ fmap (either (const Nothing) (\ast -> Just ast)) maybeEitherAst
+
+wasSuccessful :: CompileResult -> Bool
+wasSuccessful (CompileResult lg pe ast te) = (isJust lg) && (isNothing pe) && (isJust ast) && (isNothing te)
