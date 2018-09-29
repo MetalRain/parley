@@ -168,12 +168,11 @@ matchManyTypes c e xs ys = res where
                                       else zipWith (matchTypes c e) xs ys
 
 matchTypes :: Context -> Expression -> Type -> Type -> Typing
-matchTypes c e nt@(NestedType n ns) mt@(NestedType m ms) = res where
+matchTypes c e nt@(NestedType n ns) (NestedType m ms) = res where
   -- match names & subtypes of nested types
-  res = if n == m then (if length errors > 0 then Left $ head errors
-                                             else Right nt)
-                  else Left $ typeMismatchError "function name" c e [NestedType n []] [NestedType m []]
-  errors = lefts matchesE
+  res = if length errors > 0 then Left $ head errors
+                             else Right nt
+  errors = lefts $ matchesE ++ [ if n /= m then Left $ typeMismatchError "function name" c e [NestedType n []] [NestedType m []] else Right UnresolvedType ]
   matchesE = matchManyTypes c e ns ms
 -- Variable types can bind to anything, but prefer variable over unresolved
 matchTypes _ _ (VariableType _) t = Right t
@@ -185,14 +184,13 @@ matchTypes _ _ UnresolvedType t = Right t
 matchTypes c e expected actual = if expected == actual then Right expected
                                                        else Left $ typeMismatchError "type" c e [expected] [actual]
 
-
-
 -- Type system
--- 1. Stub types for each idenfier
--- 2. Resolve assignment type
--- 3. Resolve children
--- 4. Lookup from child contexts
--- 5. Unify inside of context
+-- 1. Stub types for each identifier
+-- 2. Resolve assignment types
+-- 3. Resolve children assignment types with stub contexts
+-- 4. Propagate parent context to children
+-- 5. Resolve unresolved types and variable types
+-- 6. Propagate child assignment type to parent assignment
 
 typeCheck :: Context -> LineGroup -> Either TypeError AST
 typeCheck c lg = (either
