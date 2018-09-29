@@ -4,7 +4,7 @@ import Data.Either (fromRight, fromLeft)
 
 import Types ( Type(..), LineGroup(..), AST(..), Context, mkContext)
 import Parser ( programHeader, lineGroupParser, testParser )
-import AST ( resolveTypes, mkPrimOpsContext, inheritContext )
+import AST ( typeCheck, mkPrimOpsContext, inheritContext )
 import PrimOps ( primOps )
 import PrimTypes ( integer )
 import Transform ( fromAST )
@@ -30,7 +30,7 @@ compile f = do
   putStrLn "Parse tree:"
   putStrLn $ showJust maybeLg
   putStrLn ""
-  let maybeEitherAst = fmap (\lg -> resolveTypes ctx lg) maybeLg
+  let maybeEitherAst = fmap (\lg -> typeCheck ctx lg) maybeLg
   putStrLn $ "AST error: " ++ (showJustLeft maybeEitherAst)
   let maybeAst = fmap (either (const Nothing) (\ast -> Just ast)) maybeEitherAst
   putStrLn "AST:"

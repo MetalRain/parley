@@ -3,6 +3,7 @@ module AST
     , primType
     , exprType
     , resolveTypes
+    , typeCheck
     , inheritContext
     , TypeError(..)
     , Message
@@ -129,6 +130,10 @@ exprType c e@(Expression n args) = res where
     UnresolvedType                     -> []
     _                                  -> [ Left $ typeMismatchError "expression" c e [NestedType "Function" argTypes] [fnType] ]
 
+assignmentType :: Context -> Assignment -> Typing
+assignmentType c (ExprAssign _ e) = exprType c e
+assignmentType c (PrimAssign _ p) = primType c p
+
 matchManyTypes :: Context -> Expression -> [Type] -> [Type] -> [Typing]
 matchManyTypes c e xs ys = res where
   res = if (length xs) /= (length ys) then [ Left $ typeMismatchError "function arguments" c e xs ys ]
@@ -156,6 +161,20 @@ argType :: Context -> Expression -> Argument -> Typing
 argType c e (ArgIdent n) = identNameType c e n
 argType c e (ArgPrim p) = primType c p
 
+
+-- Type system
+-- 1. Stub types for each idenfier
+-- 2. Resolve assignment type
+-- 3. Resolve children
+-- 4. Lookup from child contexts
+-- 5. Unify inside of context
+
+typeCheck :: Context -> LineGroup -> Either TypeError AST
+typeCheck c lg = (either
+  (Left)
+  (\ast -> Right $ unifyTypes $ informChilds $ lookupChildTypes ast)
+  (resolveTypes c lg))
+
 resolveTypes :: Context -> LineGroup -> Either TypeError AST
 resolveTypes c lg@(LineGroup _ a lgs) = 
   (either
@@ -165,33 +184,60 @@ resolveTypes c lg@(LineGroup _ a lgs) =
 
 resolveChildTypes :: Context -> Assignment -> [LineGroup] -> Either TypeError AST
 resolveChildTypes c a lgs = res where
-  children = map (\lg -> resolveTypes c lg) lgs
+  children = map (\lg -> typeCheck c lg) lgs
   childErrors = lefts children
   res = if ((length childErrors) == 0) then Right $ AST a c (rights children)
                                        else Left $ enhanceErrorTrace (head childErrors) a
+
+astContext :: AST -> Context
+astContext (AST _ c _) = c
+
+lookupChildTypes :: AST -> AST
+lookupChildTypes (AST a c children) = AST a newC children where
+  childContexts = map astContext children
+  -- Children inform about more specific types
+  newC = foldl fillContext c childContexts
+
+informChilds :: AST -> AST
+informChilds (AST a c children) = AST a c newChildren where
+  -- inform children about more specific types
+  newChildren = map (\(AST childA childC grandchildren) -> AST childA (fillContext c childC) grandchildren) children
+
+
+unifyTypes :: AST -> AST
+unifyTypes (AST a c children) = AST a newC children where
+  -- re-evaluate assignment type
+  newC = (either
+    (\_ -> c)
+    (\t -> fillContext c $ mkContext [(assignmentIdentifierName a, t)])
+    (assignmentType c a))
+unifyTypes a = a
+
 
 -- Context handling
 
 contextLookup :: Context -> IdentifierName -> Maybe Type
 contextLookup (Context m) n = Map.lookup n m
 
-assignmentType :: Context -> Assignment -> Typing
-assignmentType c (ExprAssign _ e) = exprType c e
-assignmentType c (PrimAssign _ p) = primType c p
+mergeContextWith :: (Type -> Type -> Type) -> Context -> Context -> Context
+mergeContextWith fn (Context m) (Context newM) = Context $ Map.unionWith fn m newM
 
 inheritContext :: Context -> Context -> Context
-inheritContext (Context m) (Context newM) = Context $ Map.unionWith overrideType m newM
+inheritContext = mergeContextWith overrideType
 
 fillContext :: Context -> Context -> Context
-fillContext (Context m) (Context newM) = Context $ Map.unionWith fillType m newM
+fillContext = mergeContextWith moreSpecificType
 
 overrideType :: Type -> Type -> Type
 overrideType a b = b
 
-fillType :: Type -> Type -> Type
-fillType a UnresolvedType = a
-fillType UnresolvedType b = b
-fillType _ b = b
+moreSpecificType :: Type -> Type -> Type
+moreSpecificType a UnresolvedType = a
+moreSpecificType UnresolvedType b = b
+moreSpecificType a (VariableType _) = a
+moreSpecificType (VariableType _) b = b
+moreSpecificType (NestedType n args) (NestedType _ args2) = NestedType n $ zipWith (\a b -> moreSpecificType a b) args args2
+moreSpecificType _ b = b
 
 mkPrimOpsContext :: [Expression] -> Context
 mkPrimOpsContext primOps = Context $ Map.fromList pairs where
