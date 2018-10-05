@@ -1,0 +1,8 @@
+main = stdin: stream -> plus d b
+  c <- g d b
+  d <- h b a
+  b <- f a
+  f = x: t -> mul b -1
+  h = x: u y: v -> minus x y
+  g = x: t y: s -> plus x y
+  a <- id stdin

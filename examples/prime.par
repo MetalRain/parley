@@ -1,4 +1,9 @@
 main = n: Integer -> isPrime n
-  res = (2, 3, 5, 7, 11, 13, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97)
-  isPrime = n: Integer -> id 0
-  # needs conditionalsb
+  isPrime = x: Integer -> isPrimeInner h m x
+    h <- divFloor x 2
+    m <- mod x h
+    isPrimeInner = i: 1       m: Integer n: Integer -> id 1
+    isPrimeInner = i: Integer m: 0       n: Integer -> id 0
+    isPrimeInner = i: Integer m: Integer n: Integer -> isPrimeInner i m n
+      i1 <- minus i 1
+      m  <- mod n i1

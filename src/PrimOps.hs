@@ -27,7 +27,7 @@ import PrimTypes
 
 primOps :: [Expression]
 primOps = [ id
-          , plus, minus, mul
+          , plus, minus, mul, mod, divFloor
           , splus, sminus, smul, sdiv
           , join, idx, get
           ]
@@ -45,6 +45,12 @@ minus = NativeExpression "minus" [integer, integer] integer
 
 mul :: Expression
 mul = NativeExpression "mul" [integer, integer] integer
+
+mod :: Expression
+mod = NativeExpression "mod" [integer, integer] integer
+
+divFloor :: Expression
+divFloor = NativeExpression "divFloor" [integer, integer] integer
 
 -- Scalar ops
 splus :: Expression

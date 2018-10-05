@@ -174,12 +174,13 @@ matchTypes c e nt@(NestedType n ns) (NestedType m ms) = res where
                              else Right nt
   errors = lefts $ matchesE ++ [ if n /= m then Left $ typeMismatchError "function name" c e [NestedType n []] [NestedType m []] else Right UnresolvedType ]
   matchesE = matchManyTypes c e ns ms
--- Variable types can bind to anything, but prefer variable over unresolved
-matchTypes _ _ (VariableType _) t = Right t
-matchTypes _ _ t (VariableType _) = Right t
 -- Unresolved types can be anything 
 matchTypes _ _ t UnresolvedType = Right t
 matchTypes _ _ UnresolvedType t = Right t
+-- Variable types can bind to anything, but prefer variable over unresolved
+matchTypes _ _ (VariableType _) t = Right t
+matchTypes _ _ t (VariableType _) = Right t
+
 -- Strict comparison, must be same type
 matchTypes c e expected actual = if expected == actual then Right expected
                                                        else Left $ typeMismatchError "type" c e [expected] [actual]

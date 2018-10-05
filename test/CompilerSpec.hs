@@ -24,3 +24,11 @@ spec = do
     it "can compile plus" $ do
       result <- testCompile "examples/plus.par"
       wasSuccessful result `shouldBe` True
+
+    it "can compile prime" $ do
+      result <- testCompile "examples/prime.par"
+      wasSuccessful result `shouldBe` True
+
+    it "can compile out-order" $ do
+      result <- testCompile "examples/out-order.par"
+      wasSuccessful result `shouldBe` True
